@@ -389,12 +389,41 @@ def get_llm_client():
     token = os.environ.get("DATABRICKS_TOKEN", "")
 
     if host and token:
-        # Clean host — remove protocol if present
         clean_host = host.replace("https://", "").replace("http://", "")
         return OpenAI(
             base_url=f"https://{clean_host}/serving-endpoints",
             api_key=token,
         ), "databricks-claude-sonnet-4-6"
+
+    # Databricks Apps: use SDK default auth (service principal identity)
+    if host:
+        clean_host = host.replace("https://", "").replace("http://", "")
+        try:
+            from databricks.sdk import WorkspaceClient
+            w = WorkspaceClient(host=f"https://{clean_host}")
+            # Try multiple approaches to get the token
+            sdk_token = None
+            # Approach 1: config.token property
+            if hasattr(w.config, 'token') and w.config.token:
+                sdk_token = w.config.token
+            # Approach 2: authenticate() may return headers dict or callable
+            if not sdk_token:
+                auth_result = w.config.authenticate()
+                if callable(auth_result):
+                    headers = auth_result()
+                elif isinstance(auth_result, dict):
+                    headers = auth_result
+                else:
+                    headers = {}
+                auth_header = headers.get("Authorization", "")
+                sdk_token = auth_header.replace("Bearer ", "") if auth_header else ""
+            if sdk_token:
+                return OpenAI(
+                    base_url=f"https://{clean_host}/serving-endpoints",
+                    api_key=sdk_token,
+                ), "databricks-claude-sonnet-4-6"
+        except Exception:
+            pass
 
     # Fallback for local dev
     api_key = os.environ.get("OPENAI_API_KEY", "")

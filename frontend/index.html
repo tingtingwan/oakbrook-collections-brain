@@ -384,13 +384,18 @@
                     body: JSON.stringify({ messages: chatMessages }),
                 });
                 const data = await res.json();
-
                 loadingEl.remove();
-                chatMessages.push({ role: 'assistant', content: data.response });
-                appendMessage('assistant', data.response, data.trace);
+
+                if (!res.ok) {
+                    const errMsg = data.detail || data.error || JSON.stringify(data);
+                    appendMessage('assistant', `Error (${res.status}): ${errMsg}`);
+                } else {
+                    chatMessages.push({ role: 'assistant', content: data.response });
+                    appendMessage('assistant', data.response, data.trace);
+                }
             } catch (e) {
                 loadingEl.remove();
-                appendMessage('assistant', 'Error: Unable to reach the Collections Brain. Please check the connection.');
+                appendMessage('assistant', 'Error: Unable to reach the Collections Brain. ' + e.message);
             } finally {
                 isLoading = false;
                 document.getElementById('sendBtn').disabled = false;
