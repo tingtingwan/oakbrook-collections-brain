@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oakbrook Collections Brain</title>
+    <style>
+        :root {
+            --primary: #1a365d;
+            --primary-light: #2a4a7f;
+            --accent: #38a169;
+            --accent-hover: #2f855a;
+            --danger: #e53e3e;
+            --warning: #dd6b20;
+            --bg: #f7fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #2d3748;
+            --text-light: #718096;
+            --sidebar-width: 340px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header .subtitle { font-size: 13px; opacity: 0.8; }
+        .header .badge {
+            background: var(--accent);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .header .powered-by {
+            margin-left: auto;
+            font-size: 12px;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Main layout */
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--primary);
+        }
+        .customer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        .customer-card {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .customer-card:hover { border-color: var(--primary-light); background: #f0f4ff; }
+        .customer-card.selected { border-color: var(--primary); background: #ebf0ff; }
+        .customer-card .name { font-weight: 600; font-size: 14px; }
+        .customer-card .product { font-size: 12px; color: var(--text-light); }
+        .customer-card .meta {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        .customer-card .tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .tag-low { background: #c6f6d5; color: #22543d; }
+        .tag-medium { background: #fefcbf; color: #744210; }
+        .tag-high { background: #fed7d7; color: #822727; }
+        .tag-dpd { background: #e2e8f0; color: #4a5568; }
+        .tag-balance { background: #bee3f8; color: #2a4365; }
+
+        /* Chat area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .message {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 4px;
+        }
+        .message.assistant .content { white-space: pre-wrap; }
+        .message.assistant .content strong,
+        .message.assistant .content b { font-weight: 600; }
+
+        /* Trace panel */
+        .trace-toggle {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--primary-light);
+            cursor: pointer;
+            user-select: none;
+        }
+        .trace-toggle:hover { text-decoration: underline; }
+        .trace-panel {
+            display: none;
+            margin-top: 8px;
+            padding: 10px;
+            background: #f7fafc;
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: 'SF Mono', Monaco, Consolas, monospace;
+            border: 1px solid var(--border);
+        }
+        .trace-panel.open { display: block; }
+        .trace-step {
+            padding: 4px 0;
+            border-bottom: 1px solid #edf2f7;
+        }
+        .trace-step:last-child { border-bottom: none; }
+        .trace-tool { color: var(--accent); font-weight: 600; }
+        .trace-iter { color: var(--text-light); }
+
+        /* Welcome message */
+        .welcome {
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--text-light);
+        }
+        .welcome h2 { color: var(--primary); margin-bottom: 12px; font-size: 22px; }
+        .welcome p { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+        .suggestion {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion:hover { border-color: var(--primary); background: #f0f4ff; }
+
+        /* Input area */
+        .input-area {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--card);
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .input-area textarea {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 44px;
+            max-height: 120px;
+            line-height: 1.4;
+        }
+        .input-area textarea:focus { border-color: var(--primary); }
+        .input-area button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        .input-area button:hover { background: var(--primary-light); }
+        .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Loading */
+        .loading { display: flex; gap: 4px; padding: 8px 0; }
+        .loading span {
+            width: 8px; height: 8px;
+            background: var(--primary-light);
+            border-radius: 50%;
+            animation: bounce 1.2s infinite;
+        }
+        .loading span:nth-child(2) { animation-delay: 0.2s; }
+        .loading span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>Collections Brain</h1>
+            <div class="subtitle">AI-Powered Collections Strategy</div>
+        </div>
+        <span class="badge">DEMO</span>
+        <div class="powered-by">
+            Powered by Databricks | MLflow 3.0 | Model Serving
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="sidebar">
+            <div class="sidebar-header">Collections Portfolio</div>
+            <div class="customer-list" id="customerList">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="welcome" id="welcome">
+                    <h2>Oakbrook Collections Brain</h2>
+                    <p>AI agent that combines Customer 360 data, propensity-to-pay models,<br>
+                    and best-time-to-contact predictions to optimise collection strategies.</p>
+                    <p style="font-size: 12px; color: #a0aec0;">
+                        Feature Tables &bull; MLflow 3.0 Model Serving &bull; Structured Streaming &bull; MCP Server (Scorecard)<br>
+                        Multi-Agent Supervisor &bull; RAG Comms &bull; Open Banking &bull; FCA Vulnerability Engine
+                    </p>
+                    <div class="suggestions" id="suggestions">
+                        <div class="suggestion" onclick="sendSuggestion(this)">Show me the full portfolio and prioritise by risk</div>
+                        <div class="suggestion" onclick="sendSuggestion(this)">Run a full analysis on C-10001 — models, scorecard, vulnerability, and strategy</div>
+                        <div class="suggestion" onclick="sendSuggestion(this)">Which customers have the highest propensity to pay?</div>
+                        <div class="suggestion" onclick="sendSuggestion(this)">Check Open Banking affordability for C-10002 and draft a WhatsApp message</div>
+                        <div class="suggestion" onclick="sendSuggestion(this)">Assess vulnerability for C-10003 and recommend a sensitive approach</div>
+                        <div class="suggestion" onclick="sendSuggestion(this)">Generate a weekly contact plan for all customers</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <textarea id="input" placeholder="Ask the Collections Brain about customers, strategies, or compliance..." rows="1"
+                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
+                <button id="sendBtn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chatMessages = [];
+        let isLoading = false;
+
+        // Load customers into sidebar
+        async function loadCustomers() {
+            try {
+                const res = await fetch('/api/customers');
+                const customers = await res.json();
+                const list = document.getElementById('customerList');
+                list.innerHTML = customers.map(c => `
+                    <div class="customer-card" onclick="selectCustomer('${c.customer_id}', '${c.name}')">
+                        <div class="name">${c.name}</div>
+                        <div class="product">${c.customer_id} &bull; ${c.product}</div>
+                        <div class="meta">
+                            <span class="tag tag-${c.risk_segment.toLowerCase()}">${c.risk_segment} Risk</span>
+                            <span class="tag tag-dpd">${c.days_past_due}d overdue</span>
+                            <span class="tag tag-balance">£${c.outstanding_balance.toLocaleString()}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Failed to load customers:', e);
+            }
+        }
+
+        function selectCustomer(id, name) {
+            // Highlight selected card
+            document.querySelectorAll('.customer-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            // Pre-fill input
+            document.getElementById('input').value = `Analyse customer ${id} (${name}) — run all models and recommend a collection strategy.`;
+            document.getElementById('input').focus();
+        }
+
+        function sendSuggestion(el) {
+            document.getElementById('input').value = el.textContent;
+            sendMessage();
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('input');
+            const text = input.value.trim();
+            if (!text || isLoading) return;
+
+            // Hide welcome
+            const welcome = document.getElementById('welcome');
+            if (welcome) welcome.style.display = 'none';
+
+            // Add user message
+            chatMessages.push({ role: 'user', content: text });
+            appendMessage('user', text);
+            input.value = '';
+            autoResize(input);
+
+            // Show loading
+            isLoading = true;
+            document.getElementById('sendBtn').disabled = true;
+            const loadingEl = appendLoading();
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: chatMessages }),
+                });
+                const data = await res.json();
+
+                loadingEl.remove();
+                chatMessages.push({ role: 'assistant', content: data.response });
+                appendMessage('assistant', data.response, data.trace);
+            } catch (e) {
+                loadingEl.remove();
+                appendMessage('assistant', 'Error: Unable to reach the Collections Brain. Please check the connection.');
+            } finally {
+                isLoading = false;
+                document.getElementById('sendBtn').disabled = false;
+            }
+        }
+
+        function appendMessage(role, content, trace) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `message ${role}`;
+
+            // Simple markdown-like rendering for assistant
+            let html = escapeHtml(content);
+            if (role === 'assistant') {
+                // Bold
+                html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                // Headers (## and ###)
+                html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;color:#1a365d;">$1</strong>');
+                html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;color:#1a365d;">$1</strong>');
+                // Bullet points with indent
+                html = html.replace(/^- (.+)$/gm, '  • $1');
+                // Numbered lists
+                html = html.replace(/^(\d+)\. (.+)$/gm, '  $1. $2');
+            }
+
+            let traceHtml = '';
+            if (trace && trace.length > 0) {
+                const traceId = 'trace-' + Date.now();
+                traceHtml = `
+                    <div class="trace-toggle" onclick="document.getElementById('${traceId}').classList.toggle('open')">
+                        📊 Agent Trace (${trace.length} tool calls) — click to expand
+                    </div>
+                    <div class="trace-panel" id="${traceId}">
+                        ${trace.map(t => `
+                            <div class="trace-step">
+                                <span class="trace-iter">Step ${t.iteration}</span>
+                                <span class="trace-tool">${t.tool}</span>(${JSON.stringify(t.arguments)})
+                                ${t.databricks_component ? `<br><span style="color:#718096;font-size:11px;">↳ ${t.databricks_component}</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            div.innerHTML = `<div class="content">${html}</div>${traceHtml}`;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendLoading() {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div;
+        }
+
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+        }
+
+        document.getElementById('input').addEventListener('input', function() {
+            autoResize(this);
+        });
+
+        // Init
+        loadCustomers();
+    </script>
+</body>
+</html>
