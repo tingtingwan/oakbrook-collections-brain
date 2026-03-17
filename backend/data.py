@@ -1,8 +1,8 @@
 """
-Synthetic collections data modelled on Oakbrook Finance's non-prime lending domain.
-Represents what would live in Feature Tables / Unity Catalog in production.
+Collections data layer — reads from Unity Catalog Feature Tables when running
+on Databricks, falls back to local synthetic data for local development.
 
-Databricks components demonstrated:
+Databricks components:
 - Feature Tables (Unity Catalog) → Customer 360 profiles
 - MLflow Model Serving → Propensity-to-pay, Best-time-to-contact
 - Structured Streaming → Real-time payment signals, DD cancellations
@@ -11,6 +11,98 @@ Databricks components demonstrated:
 """
 
 import json
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Unity Catalog Feature Table access (real Databricks environment)
+# ---------------------------------------------------------------------------
+UC_CATALOG = "main"
+UC_SCHEMA = "oakbrook_collections"
+_sql_conn = None
+
+
+def _get_sql_connection():
+    """Get Databricks SQL connection for reading Feature Tables."""
+    global _sql_conn
+    if _sql_conn is not None:
+        return _sql_conn
+
+    host = os.environ.get("DATABRICKS_HOST", "")
+    if not host:
+        return None
+
+    try:
+        from databricks import sql as dbsql
+        from databricks.sdk import WorkspaceClient
+
+        clean_host = host.replace("https://", "").replace("http://", "")
+        w = WorkspaceClient(host=f"https://{clean_host}")
+
+        # Get token
+        token = None
+        if hasattr(w.config, 'token') and w.config.token:
+            token = w.config.token
+        else:
+            auth_result = w.config.authenticate()
+            if callable(auth_result):
+                headers = auth_result()
+            elif isinstance(auth_result, dict):
+                headers = auth_result
+            else:
+                headers = {}
+            auth_header = headers.get("Authorization", "")
+            token = auth_header.replace("Bearer ", "") if auth_header else ""
+
+        if not token:
+            return None
+
+        # Find a SQL warehouse
+        warehouses = w.warehouses.list()
+        wh_id = None
+        for wh in warehouses:
+            if wh.state and wh.state.value == "RUNNING":
+                wh_id = wh.id
+                break
+        if not wh_id:
+            # Try the first one
+            for wh in w.warehouses.list():
+                wh_id = wh.id
+                break
+
+        if not wh_id:
+            logger.warning("No SQL warehouse found")
+            return None
+
+        _sql_conn = dbsql.connect(
+            server_hostname=clean_host,
+            http_path=f"/sql/1.0/warehouses/{wh_id}",
+            access_token=token,
+        )
+        logger.info(f"Connected to UC via SQL warehouse {wh_id}")
+        return _sql_conn
+    except Exception as e:
+        logger.warning(f"Could not connect to UC Feature Tables: {e}")
+        return None
+
+
+def _query_uc(query: str) -> list[dict] | None:
+    """Execute a SQL query against Unity Catalog and return rows as dicts."""
+    conn = _get_sql_connection()
+    if not conn:
+        return None
+    try:
+        cursor = conn.cursor()
+        cursor.execute(query)
+        columns = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        cursor.close()
+        return [dict(zip(columns, row)) for row in rows]
+    except Exception as e:
+        logger.warning(f"UC query failed: {e}")
+        return None
 
 # ---------------------------------------------------------------------------
 # Customer Feature Table (would be a UC Feature Table in production)
@@ -335,19 +427,48 @@ COMMS_TEMPLATES = {
 
 
 def get_customer(customer_id: str) -> dict | None:
+    """Look up customer from UC Feature Table, fallback to local data."""
+    uc_result = _query_uc(
+        f"SELECT * FROM {UC_CATALOG}.{UC_SCHEMA}.customer_360 WHERE customer_id = '{customer_id}'"
+    )
+    if uc_result and len(uc_result) > 0:
+        row = uc_result[0]
+        row["vulnerability_flags"] = []  # Would be a separate table in production
+        row["_source"] = "Unity Catalog Feature Table"
+        return row
     return CUSTOMERS.get(customer_id)
 
 
 def get_all_customers() -> list[dict]:
+    """List all customers from UC Feature Table, fallback to local data."""
+    uc_result = _query_uc(
+        f"SELECT * FROM {UC_CATALOG}.{UC_SCHEMA}.customer_360 ORDER BY days_past_due DESC"
+    )
+    if uc_result and len(uc_result) > 0:
+        for row in uc_result:
+            row["vulnerability_flags"] = []
+            row["_source"] = "Unity Catalog Feature Table"
+        return uc_result
     return list(CUSTOMERS.values())
 
 
 def get_payment_history(customer_id: str) -> list[dict] | None:
+    """Get payment history from UC table, fallback to local data."""
+    uc_result = _query_uc(
+        f"SELECT * FROM {UC_CATALOG}.{UC_SCHEMA}.payment_history WHERE customer_id = '{customer_id}' ORDER BY date"
+    )
+    if uc_result and len(uc_result) > 0:
+        return uc_result
     return PAYMENT_HISTORY.get(customer_id)
 
 
 def get_open_banking_data(customer_id: str) -> dict | None:
-    """Retrieve Open Banking affordability data (ClearScore / aggregator)."""
+    """Retrieve Open Banking affordability data from UC table, fallback to local."""
+    uc_result = _query_uc(
+        f"SELECT * FROM {UC_CATALOG}.{UC_SCHEMA}.open_banking_data WHERE customer_id = '{customer_id}'"
+    )
+    if uc_result and len(uc_result) > 0:
+        return uc_result[0]
     return OPEN_BANKING_DATA.get(customer_id)
 
 

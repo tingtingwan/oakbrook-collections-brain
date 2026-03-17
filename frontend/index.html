@@ -310,9 +310,9 @@
                         </div>
                         <div class="comp-tool">Tool: score_propensity_to_pay &rarr; MLflow Model Serving</div>
                         <div class="comp-desc">ML model scoring likelihood of payment using ~1,000 features (employment, payment history, Open Banking data). Served in real-time via Model Serving with Feature Table auto-lookup.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/model-serving/index.html" target="_blank">Model Serving Docs</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/index.html" target="_blank">MLflow on Databricks</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/feature-store/index.html" target="_blank">Feature Engineering</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/machine-learning/model-serving/create-manage-serving-endpoints" target="_blank">Model Serving Docs</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/mlflow/index.html" target="_blank">MLflow on Databricks</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/machine-learning/feature-store/uc/feature-tables-uc" target="_blank">Feature Engineering</a>
                     </div>
                     <div class="component-card cat-ml">
                         <div class="comp-header">
@@ -331,7 +331,7 @@
                         </div>
                         <div class="comp-tool">Tool: recommend_strategy &rarr; Agent Framework</div>
                         <div class="comp-desc">Orchestrates all tools: runs PTP model, BTC model, scorecard, vulnerability assessment, Open Banking check, then combines into an actionable strategy with compliance flags.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/index.html" target="_blank">Agent Framework</a>
+                        <a class="comp-link" href="https://docs.databricks.com/aws/en/generative-ai/agent-framework/multi-agent-apps" target="_blank">Agent Framework</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/create-agent.html" target="_blank">Create an Agent</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/foundation-models/index.html" target="_blank">Foundation Model APIs</a>
                     </div>
@@ -342,7 +342,7 @@
                         </div>
                         <div class="comp-tool">Tool: generate_communication &rarr; Vector Search + LLM</div>
                         <div class="comp-desc">Retrieves tone-appropriate communication templates from a Vector Search index, then personalises with customer data. Auto-selects tone (friendly/empathetic/formal/sensitive) based on vulnerability and arrears.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/vector-search/index.html" target="_blank">Vector Search</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/generative-ai/vector-search" target="_blank">Vector Search</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/retrieval-augmented-generation.html" target="_blank">RAG on Databricks</a>
                     </div>
                 </div>
@@ -356,8 +356,8 @@
                         </div>
                         <div class="comp-tool">Tool: lookup_customer &rarr; Feature Tables (Unity Catalog)</div>
                         <div class="comp-desc">Unified customer profile combining demographics, account details, contact history, risk segments, and vulnerability flags. Materialised from Oracle loan system + IceNet + Zendesk via Lakeflow Connect.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html" target="_blank">Feature Tables in UC</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html" target="_blank">Unity Catalog</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/machine-learning/feature-store/uc/feature-tables-uc" target="_blank">Feature Tables in UC</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/data-governance/unity-catalog/" target="_blank">Unity Catalog</a>
                     </div>
                     <div class="component-card cat-data">
                         <div class="comp-header">
@@ -366,7 +366,7 @@
                         </div>
                         <div class="comp-tool">Tool: get_payment_history &rarr; Structured Streaming</div>
                         <div class="comp-desc">Near-real-time ingestion of payment events, DD cancellations, and partial payments. Enables immediate signal detection (e.g., customer cancels direct debit &rarr; trigger proactive outreach).</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/structured-streaming/index.html" target="_blank">Structured Streaming</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/structured-streaming/concepts" target="_blank">Structured Streaming</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/delta-live-tables/index.html" target="_blank">Delta Live Tables</a>
                     </div>
                     <div class="component-card cat-data">
@@ -376,7 +376,7 @@
                         </div>
                         <div class="comp-tool">Oracle CDC + SQL Server + SFTP + Zendesk</div>
                         <div class="comp-desc">Managed connectors for ingesting from Oracle (loan management), SQL Server/IceNet, SFTP (collections providers), and Zendesk (customer contacts). CDC-based for real-time, query-based for batch.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/connect/index.html" target="_blank">Lakeflow Connect</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/ingestion/" target="_blank">Lakeflow Connect</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/connect/ingestion/oracle/index.html" target="_blank">Oracle Connector</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/connect/ingestion/sql-server/index.html" target="_blank">SQL Server Connector</a>
                     </div>
@@ -387,8 +387,8 @@
                         </div>
                         <div class="comp-tool">Tool: get_open_banking_data &rarr; External API Integration</div>
                         <div class="comp-desc">Verified affordability data from ClearScore/aggregators: income, expenses, disposable income, gambling detection. Used for FCA-compliant affordability assessments and payment plan recommendations.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/connect/index.html" target="_blank">Partner Connectors</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/structured-streaming/index.html" target="_blank">API Ingestion via Streaming</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/ingestion/" target="_blank">Partner Connectors</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/structured-streaming/concepts" target="_blank">API Ingestion via Streaming</a>
                     </div>
                 </div>
 
@@ -401,7 +401,7 @@
                         </div>
                         <div class="comp-tool">Tool: get_scorecard_segment &rarr; MCP Server</div>
                         <div class="comp-desc">Scorecard validation logic served as an MCP tool. Matches customers to collection segments (Early/Mid/Late/Pre-Litigation) with strategy, contact frequency limits, and escalation triggers.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/mcp-server.html" target="_blank">MCP Server on Databricks</a>
+                        <a class="comp-link" href="https://docs.databricks.com/aws/en/generative-ai/mcp/" target="_blank">MCP Server on Databricks</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/build-custom-agent-tool.html" target="_blank">Custom Agent Tools</a>
                     </div>
                     <div class="component-card cat-govern">
@@ -411,7 +411,7 @@
                         </div>
                         <div class="comp-tool">Tool: assess_vulnerability &rarr; Business Rules + Open Banking</div>
                         <div class="comp-desc">Automated vulnerability screening per FCA Consumer Duty. Checks employment, arrears depth, engagement patterns, Open Banking signals (gambling), and existing flags. Determines handling approach.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html" target="_blank">Data Governance</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/data-governance/unity-catalog/" target="_blank">Data Governance</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/manage-privileges/index.html" target="_blank">Access Control</a>
                     </div>
                     <div class="component-card cat-govern">
@@ -421,8 +421,8 @@
                         </div>
                         <div class="comp-tool">Every tool call &rarr; MLflow Trace</div>
                         <div class="comp-desc">Full traceability of every agent decision — which models were called, what scores were returned, what strategy was recommended. Essential for FCA "Why did you prioritise this customer?" questions.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/llm-tracing/index.html" target="_blank">MLflow Tracing</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/index.html" target="_blank">MLflow 3.0</a>
+                        <a class="comp-link" href="https://docs.databricks.com/aws/en/mlflow3/genai/tracing/" target="_blank">MLflow Tracing</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/mlflow/index.html" target="_blank">MLflow 3.0</a>
                     </div>
                 </div>
 
@@ -435,7 +435,7 @@
                         </div>
                         <div class="comp-tool">Conversation history &rarr; Lakebase (PostgreSQL)</div>
                         <div class="comp-desc">Persistent conversation memory stored in Lakebase (Databricks-managed PostgreSQL). Enables multi-turn conversations, session continuity, and audit logging. PostgreSQL-compatible — familiar query patterns, no infrastructure to manage.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/database/lakebase/index.html" target="_blank">Lakebase Docs</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/database/lakebase/" target="_blank">Lakebase Docs</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/database/lakebase/get-started.html" target="_blank">Get Started</a>
                     </div>
                     <div class="component-card cat-app">
@@ -454,7 +454,7 @@
                         </div>
                         <div class="comp-tool">Agent traces &rarr; MLflow 3.0 (native Databricks)</div>
                         <div class="comp-desc">MLflow 3.0 provides the same LLM observability as Langfuse — prompt tracking, trace visualisation, latency monitoring — but natively integrated with Databricks. No separate infrastructure. Unity Catalog governed. Already used for model versioning.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/llm-tracing/index.html" target="_blank">MLflow Tracing</a>
+                        <a class="comp-link" href="https://docs.databricks.com/aws/en/mlflow3/genai/tracing/" target="_blank">MLflow Tracing</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/mlflow/tracking/index.html" target="_blank">Experiment Tracking</a>
                     </div>
                 </div>
@@ -468,7 +468,7 @@
                         </div>
                         <div class="comp-tool">FastAPI + HTML &rarr; Databricks Apps</div>
                         <div class="comp-desc">Full-stack application hosted on Databricks Apps. FastAPI backend with agent orchestration, served via uvicorn. Authenticated via workspace SSO. No external infrastructure required.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/en/databricks-apps/index.html" target="_blank">Databricks Apps</a>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/dev-tools/databricks-apps/" target="_blank">Databricks Apps</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/databricks-apps/app-tutorial.html" target="_blank">App Tutorial</a>
                     </div>
                 </div>

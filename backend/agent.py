@@ -15,7 +15,20 @@ Databricks capabilities demonstrated:
 
 import json
 import os
+import logging
 from openai import OpenAI
+
+# MLflow 3.0 Tracing — real traces logged to workspace
+try:
+    import mlflow
+    from mlflow.entities import SpanType
+    mlflow.set_experiment("/Users/tingting.wan@databricks.com/oakbrook-collections-brain")
+    MLFLOW_AVAILABLE = True
+except Exception:
+    MLFLOW_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
 from backend.data import (
     get_customer,
     get_all_customers,
@@ -214,6 +227,21 @@ Format responses clearly with sections, bullet points, and bold text. Always sho
 
 def _execute_tool(name: str, arguments: dict) -> str:
     """Route tool calls to the appropriate data/model function."""
+    # Wrap in MLflow span for tracing
+    if MLFLOW_AVAILABLE:
+        try:
+            with mlflow.start_span(name=f"tool:{name}", span_type=SpanType.TOOL) as span:
+                span.set_inputs(arguments)
+                result = _execute_tool_inner(name, arguments)
+                span.set_outputs({"result_length": len(result), "preview": result[:200]})
+                return result
+        except Exception:
+            pass
+    return _execute_tool_inner(name, arguments)
+
+
+def _execute_tool_inner(name: str, arguments: dict) -> str:
+    """Inner tool execution logic."""
     if name == "lookup_customer":
         result = get_customer(arguments["customer_id"])
         if not result:
@@ -441,20 +469,58 @@ async def run_agent(messages: list[dict]) -> dict:
     Run the collections agent with tool-calling loop.
     Returns the final assistant message and tool call trace (MLflow 3.0).
     """
+    # Start MLflow trace for the entire agent run
+    if MLFLOW_AVAILABLE:
+        try:
+            return await _run_agent_traced(messages)
+        except Exception as e:
+            logger.warning(f"MLflow tracing failed, running without: {e}")
+    return await _run_agent_inner(messages)
+
+
+async def _run_agent_traced(messages: list[dict]) -> dict:
+    with mlflow.start_span(name="collections_brain_agent", span_type=SpanType.AGENT) as span:
+        span.set_inputs({"messages": [{"role": m["role"], "content": m["content"][:100]} for m in messages]})
+        result = await _run_agent_inner(messages)
+        span.set_outputs({"response_length": len(result.get("response", "")), "tool_calls": len(result.get("trace", []))})
+        return result
+
+
+async def _run_agent_inner(messages: list[dict]) -> dict:
     client, model = get_llm_client()
 
     full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
 
-    trace = []  # MLflow 3.0 traceability — every tool call logged
+    trace = []
     max_iterations = 10
 
     for i in range(max_iterations):
-        response = client.chat.completions.create(
-            model=model,
-            messages=full_messages,
-            tools=TOOLS,
-            tool_choice="auto",
-        )
+        # Log LLM call as a span
+        if MLFLOW_AVAILABLE:
+            try:
+                with mlflow.start_span(name=f"llm_call_{i+1}", span_type=SpanType.LLM) as span:
+                    span.set_inputs({"model": model, "message_count": len(full_messages), "iteration": i + 1})
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=full_messages,
+                        tools=TOOLS,
+                        tool_choice="auto",
+                    )
+                    span.set_outputs({"finish_reason": response.choices[0].finish_reason})
+            except Exception:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=full_messages,
+                    tools=TOOLS,
+                    tool_choice="auto",
+                )
+        else:
+            response = client.chat.completions.create(
+                model=model,
+                messages=full_messages,
+                tools=TOOLS,
+                tool_choice="auto",
+            )
 
         choice = response.choices[0]
 
