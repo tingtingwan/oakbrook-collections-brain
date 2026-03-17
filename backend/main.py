@@ -33,101 +33,6 @@ memory = ConversationMemory()
 # Individual tool endpoints (for step-by-step workbench UI)
 # ---------------------------------------------------------------------------
 
-try:
-    import mlflow
-    mlflow.set_experiment("/Shared/oakbrook-collections-brain-traces")
-    # Enable MLflow tracing for auto-instrumentation
-    mlflow.tracing.enable()
-    MLFLOW_AVAILABLE = True
-except Exception:
-    MLFLOW_AVAILABLE = False
-
-
-_trace_token_cache = {"host": None, "token": None}
-
-def _get_trace_token():
-    if _trace_token_cache["token"]:
-        return _trace_token_cache["host"], _trace_token_cache["token"]
-    try:
-        host = os.environ.get("DATABRICKS_HOST", "").replace("https://", "").replace("http://", "")
-        if not host:
-            return None, None
-        from databricks.sdk import WorkspaceClient
-        w = WorkspaceClient(host=f"https://{host}")
-        token = None
-        if hasattr(w.config, 'token') and w.config.token:
-            token = w.config.token
-        else:
-            auth_result = w.config.authenticate()
-            headers = auth_result() if callable(auth_result) else auth_result if isinstance(auth_result, dict) else {}
-            token = headers.get("Authorization", "").replace("Bearer ", "")
-        if token:
-            _trace_token_cache["host"] = host
-            _trace_token_cache["token"] = token
-        return host, token
-    except Exception:
-        return None, None
-
-
-def log_trace(name: str, inputs: dict, outputs: dict):
-    """Log a trace to MLflow via REST API. Start trace → End trace."""
-    try:
-        import time
-        import requests as _req
-        host, token = _get_trace_token()
-        if not host or not token:
-            return
-
-        ts_start = int(time.time() * 1000)
-        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
-
-        # Start trace
-        start_resp = _req.post(
-            f"https://{host}/api/2.0/mlflow/traces",
-            headers=hdrs,
-            json={
-                "experiment_id": "1734200624343198",
-                "timestamp_ms": ts_start,
-                "execution_time_ms": 0,
-                "status": "IN_PROGRESS",
-                "request_metadata": [
-                    {"key": "mlflow.traceName", "value": name},
-                    {"key": "mlflow.traceInputs", "value": json.dumps(inputs)},
-                ],
-                "tags": [
-                    {"key": "tool", "value": name},
-                    {"key": "customer_id", "value": str(inputs.get("customer_id", ""))},
-                    {"key": "app", "value": "oakbrook-collections-brain"},
-                ],
-            },
-            timeout=5,
-        )
-
-        if start_resp.status_code != 200:
-            return
-
-        trace_id = start_resp.json().get("trace_info", {}).get("request_id", "")
-        if not trace_id:
-            return
-
-        # End trace
-        ts_end = int(time.time() * 1000)
-        _req.patch(
-            f"https://{host}/api/2.0/mlflow/traces/{trace_id}",
-            headers=hdrs,
-            json={
-                "status": "OK",
-                "timestamp_ms": ts_end,
-                "request_metadata": [
-                    {"key": "mlflow.traceName", "value": name},
-                    {"key": "mlflow.traceInputs", "value": json.dumps(inputs)},
-                    {"key": "mlflow.traceOutputs", "value": json.dumps(outputs)},
-                ],
-            },
-            timeout=5,
-        )
-    except Exception:
-        pass
 
 
 @app.get("/api/customers")
@@ -140,7 +45,6 @@ async def get_customer_detail(customer_id: str):
     c = get_customer(customer_id)
     if not c:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("lookup_customer", {"customer_id": customer_id}, {"name": c.get("name"), "source": c.get("_source", "UC Feature Table")})
     return c
 
 
@@ -149,7 +53,6 @@ async def get_customer_payments(customer_id: str):
     result = get_payment_history(customer_id)
     if not result:
         return JSONResponse(status_code=404, content={"error": "No payment history"})
-    log_trace("get_payment_history", {"customer_id": customer_id}, {"count": len(result), "source": "UC Table"})
     return result
 
 
@@ -158,7 +61,6 @@ async def get_customer_ptp(customer_id: str):
     result = score_propensity_to_pay(customer_id)
     if not result:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("score_propensity_to_pay", {"customer_id": customer_id}, {"score": result.get("propensity_to_pay_score"), "band": result.get("band"), "served_via": result.get("served_via")})
     return result
 
 
@@ -167,7 +69,6 @@ async def get_customer_btc(customer_id: str):
     result = score_best_time_to_contact(customer_id)
     if not result:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("score_best_time_to_contact", {"customer_id": customer_id}, {"day": result.get("best_day"), "time": result.get("best_time"), "served_via": result.get("served_via")})
     return result
 
 
@@ -176,7 +77,6 @@ async def get_customer_ob(customer_id: str):
     result = get_open_banking_data(customer_id)
     if not result:
         return JSONResponse(status_code=404, content={"error": "No Open Banking data — customer has not consented"})
-    log_trace("get_open_banking_data", {"customer_id": customer_id}, {"available_for_repayment": result.get("available_for_repayment"), "source": "UC Table"})
     return result
 
 
@@ -185,7 +85,6 @@ async def get_customer_vulnerability(customer_id: str):
     result = assess_vulnerability(customer_id)
     if not result:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("assess_vulnerability", {"customer_id": customer_id}, {"risk_level": result.get("vulnerability_risk_level", result.get("risk_level")), "source": result.get("source")})
     return result
 
 
@@ -194,7 +93,6 @@ async def get_customer_scorecard(customer_id: str, propensity_band: str = "Mediu
     result = get_scorecard_segment(customer_id, propensity_band)
     if not result:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("get_scorecard_segment", {"customer_id": customer_id, "propensity_band": propensity_band}, {"segment": result.get("assigned_segment"), "source": result.get("source")})
     return result
 
 
@@ -203,7 +101,6 @@ async def get_customer_comms(customer_id: str, tone: str = "auto"):
     result = generate_communication(customer_id, tone)
     if not result:
         return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    log_trace("generate_communication", {"customer_id": customer_id, "tone": tone}, {"channel": result.get("channel"), "tone": result.get("tone"), "source": result.get("source")})
     return result
 
 
