@@ -522,7 +522,7 @@ for model_name in [PTP_MODEL_NAME, BTC_MODEL_NAME]:
     print(f"Model: {rm.name}")
     print(f"Description: {rm.description[:80]}...")
     print(f"Aliases: {rm.aliases}")
-    for v in rm.latest_versions:
+    for v in (rm.latest_versions or []):
         print(f"  Version {v.version}:")
         print(f"    Status: {v.status}")
         print(f"    Run ID: {v.run_id[:12]}...")
