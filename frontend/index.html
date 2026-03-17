@@ -431,12 +431,11 @@
                     <div class="component-card cat-data">
                         <div class="comp-header">
                             <span class="comp-icon">&#x1F9E0;</span>
-                            <span class="comp-title">Agent Memory (Lakebase)</span>
+                            <span class="comp-title">Agent Memory (PostgreSQL)</span>
                         </div>
-                        <div class="comp-tool">Conversation history &rarr; Lakebase (PostgreSQL)</div>
-                        <div class="comp-desc">Persistent conversation memory stored in Lakebase (Databricks-managed PostgreSQL). Enables multi-turn conversations, session continuity, and audit logging. PostgreSQL-compatible — familiar query patterns, no infrastructure to manage.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/database/lakebase/" target="_blank">Lakebase Docs</a>
-                        <a class="comp-link" href="https://docs.databricks.com/en/database/lakebase/get-started.html" target="_blank">Get Started</a>
+                        <div class="comp-tool">Conversation history &rarr; PostgreSQL / Cloud SQL</div>
+                        <div class="comp-desc">Persistent conversation memory for multi-turn conversations and audit logging. On GCP, use Cloud SQL (PostgreSQL) or any managed PostgreSQL. <b>Lakebase</b> (Databricks-managed PostgreSQL) is coming to GCP in H2 FY27 — currently AWS-only.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/database/lakebase/" target="_blank">Lakebase (AWS, coming GCP)</a>
                     </div>
                     <div class="component-card cat-app">
                         <div class="comp-header">
@@ -471,6 +470,70 @@
                         <a class="comp-link" href="https://docs.databricks.com/gcp/en/dev-tools/databricks-apps/" target="_blank">Databricks Apps</a>
                         <a class="comp-link" href="https://docs.databricks.com/en/databricks-apps/app-tutorial.html" target="_blank">App Tutorial</a>
                     </div>
+                </div>
+
+                <h3>GCP europe-west2 Availability (Oakbrook's Region)</h3>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:24px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <tr style="border-bottom:2px solid var(--border);">
+                            <th style="text-align:left;padding:8px;">Capability</th>
+                            <th style="text-align:left;padding:8px;">Status</th>
+                            <th style="text-align:left;padding:8px;">Notes</th>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">FMAPI (Claude, Llama)</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">Claude Sonnet served natively in EU, data stays in Europe</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">Model Serving (Custom + External)</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">CPU + GPU endpoints, MLflow models</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">MLflow 3.0 Tracing</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">All GCP regions — replaces Langfuse</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">Vector Search (RAG)</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">For comms template retrieval</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">MCP Server</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">Public Preview</td>
+                            <td style="padding:8px;">Already enabled for Oakbrook</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">Databricks Apps</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">This demo runs as a Databricks App</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">Lakeflow Connect</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">Oracle CDC, SQL Server — key for loan migration</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#f0fdf4;">
+                            <td style="padding:8px;font-weight:600;">Feature Tables (UC)</td>
+                            <td style="padding:8px;color:#22543d;font-weight:600;">GA</td>
+                            <td style="padding:8px;">Customer 360 Feature Table in Unity Catalog</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#fefcbf;">
+                            <td style="padding:8px;font-weight:600;">AgentBricks (KA/SA)</td>
+                            <td style="padding:8px;color:#744210;font-weight:600;">Coming ~May 2026</td>
+                            <td style="padding:8px;">No-code agent builder — not on GCP yet. Use FMAPI + custom tools today.</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);background:#fefcbf;">
+                            <td style="padding:8px;font-weight:600;">Lakebase</td>
+                            <td style="padding:8px;color:#744210;font-weight:600;">Coming H2 FY27</td>
+                            <td style="padding:8px;">AWS-only today. Use Cloud SQL (PostgreSQL) on GCP for now.</td>
+                        </tr>
+                    </table>
+                    <p style="margin-top:12px;font-size:12px;color:#718096;">
+                        <b>Previous blockers resolved:</b> Model Serving and FMAPI — which blocked the Customer Service Agent and Credit Decisioning UCOs — are now fully available in europe-west2 as of Q1 FY26.
+                    </p>
                 </div>
 
                 <h3>Production Roadmap</h3>
