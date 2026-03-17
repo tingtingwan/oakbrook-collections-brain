@@ -474,9 +474,32 @@ def get_open_banking_data(customer_id: str) -> dict | None:
 
 def get_scorecard_segment(customer_id: str, propensity_band: str) -> dict | None:
     """
-    Match customer to collection scorecard segment.
-    In production: MCP Server serving the scorecard SQL logic.
+    Call the collection scorecard UC SQL function (MCP Server pattern).
+    The function main.oakbrook_collections.collection_scorecard is served
+    as a UC function — in production this would be exposed via MCP Server.
     """
+    # Try UC SQL function first
+    result = _query_uc(
+        f"SELECT * FROM main.oakbrook_collections.collection_scorecard('{customer_id}', '{propensity_band}')"
+    )
+    if result and len(result) > 0:
+        row = result[0]
+        return {
+            "customer_id": customer_id,
+            "assigned_segment": row.get("assigned_segment", "Unknown"),
+            "strategy": row.get("strategy", "Unknown"),
+            "recommended_actions": [
+                row.get("action_1", ""),
+                row.get("action_2", ""),
+                row.get("action_3", ""),
+            ],
+            "max_contact_frequency": row.get("max_contact_frequency", "Unknown"),
+            "escalation_trigger": row.get("escalation_trigger", "Unknown"),
+            "source": "UC SQL Function (MCP Server pattern) — collection_scorecard v2.4",
+        }
+
+    # Fallback to local rules
+    logger.info(f"Scorecard: falling back to local rules for {customer_id}")
     c = get_customer(customer_id)
     if not c:
         return None
@@ -504,77 +527,124 @@ def get_scorecard_segment(customer_id: str, propensity_band: str) -> dict | None
         "recommended_actions": segment["actions"],
         "max_contact_frequency": segment["max_contact_frequency"],
         "escalation_trigger": segment["escalation_trigger"],
-        "source": "MCP Server — Collection Scorecard v2.4",
+        "source": "Local fallback (UC function unavailable)",
     }
 
 
 def assess_vulnerability(customer_id: str) -> dict | None:
     """
-    Assess customer vulnerability indicators (FCA Consumer Duty requirement).
+    Assess customer vulnerability via LLM (Claude Sonnet via FMAPI).
+    The LLM analyses the full customer profile against FCA Consumer Duty requirements.
     """
     c = get_customer(customer_id)
     if not c:
         return None
 
+    ob = get_open_banking_data(customer_id)
+    ob_context = ""
+    if ob:
+        gambling = ob.get("gambling_transactions_30d", 0)
+        available = ob.get("available_for_repayment", 0)
+        ob_context = f"""
+Open Banking Data (ClearScore):
+- Available for repayment: £{available}/month
+- Gambling transactions (30d): {gambling}
+- Income stability: {ob.get('income_stability', 'unknown')}"""
+
+    try:
+        from backend.agent import get_llm_client
+        import json as _json
+        client, model = get_llm_client()
+
+        prompt = f"""You are an FCA Consumer Duty compliance officer at Oakbrook Finance (UK non-prime lender).
+Assess this customer's vulnerability indicators and return a structured JSON response.
+
+CUSTOMER PROFILE:
+- Customer ID: {customer_id}
+- Name: {c.get('name', 'Unknown')}
+- Employment: {c.get('employment_status', 'Unknown')}
+- Monthly income: £{c.get('monthly_income', 0)}
+- Outstanding balance: £{c.get('outstanding_balance', 0)}
+- Days past due: {c.get('days_past_due', 0)}
+- Months in arrears: {c.get('months_in_arrears', 0)}
+- Contact attempts (30d): {c.get('contact_attempts_30d', 0)}
+- Last contact outcome: {c.get('last_contact_outcome', 'Unknown')}
+- Payment promises kept: {c.get('payment_promises_kept', 0)}
+- Payment promises broken: {c.get('payment_promises_broken', 0)}
+- Direct debit active: {c.get('direct_debit_active', False)}
+- ClearScore band: {c.get('clearscore_band', 'Unknown')}
+{ob_context}
+
+FCA VULNERABILITY CATEGORIES:
+1. Health — physical/mental health conditions affecting financial decisions
+2. Life events — job loss, bereavement, relationship breakdown
+3. Resilience — low financial resilience, no savings buffer
+4. Capability — low financial literacy, language barriers
+
+Return ONLY valid JSON in this exact format:
+{{"risk_level": "Low|Medium|High", "indicators": [{{"type": "Financial|Behavioural|Health|Life Event|Compliance", "detail": "description", "severity": "Low|Medium|High"}}], "fca_action_required": true/false, "recommended_approach": "what to do", "reasoning": "brief explanation"}}"""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=600,
+            temperature=0.3,
+        )
+
+        raw = response.choices[0].message.content.strip()
+        # Extract JSON from response (handle markdown code blocks)
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+
+        result = _json.loads(raw)
+        result["customer_id"] = customer_id
+        result["source"] = f"LLM vulnerability assessment ({model}) via FMAPI"
+        result["compliance_note"] = "FCA Consumer Duty: Firms must act to deliver good outcomes for customers, especially those in vulnerable circumstances."
+        return result
+
+    except Exception as e:
+        logger.warning(f"LLM vulnerability assessment failed, using local: {e}")
+        return _assess_vulnerability_local(c, customer_id)
+
+
+def _assess_vulnerability_local(c: dict, customer_id: str) -> dict:
+    """Local fallback when LLM is unavailable."""
     indicators = []
     risk_level = "Low"
 
-    # Employment-based vulnerability
     if c.get("employment_status") == "Unemployed":
         indicators.append({"type": "Financial", "detail": "Currently unemployed", "severity": "High"})
         risk_level = "High"
     elif c.get("employment_status") == "Self Employed":
         indicators.append({"type": "Financial", "detail": "Self-employed — income may be irregular", "severity": "Medium"})
 
-    # Arrears depth
     mia = int(c.get("months_in_arrears", 0))
     if mia >= 3:
-        indicators.append({"type": "Financial", "detail": f"{mia} months in arrears — persistent debt indicator", "severity": "High"})
+        indicators.append({"type": "Financial", "detail": f"{mia} months in arrears — persistent debt", "severity": "High"})
         risk_level = "High"
 
-    # Contact engagement
     if c.get("last_contact_outcome") == "Refused to Engage":
-        indicators.append({"type": "Behavioural", "detail": "Refusing to engage — potential distress signal", "severity": "Medium"})
+        indicators.append({"type": "Behavioural", "detail": "Refusing to engage — potential distress", "severity": "Medium"})
 
-    # Contact frequency
-    contact_attempts = int(c.get("contact_attempts_30d", 0))
-    if contact_attempts >= 6:
-        indicators.append({"type": "Compliance", "detail": f"{contact_attempts} contact attempts in 30 days — approaching limit", "severity": "Medium"})
-
-    # Existing flags
-    for flag in c.get("vulnerability_flags", []):
-        label = flag.replace("_", " ").title()
-        indicators.append({"type": "Flagged", "detail": f"Previously flagged: {label}", "severity": "Medium"})
-
-    # Open Banking signals
-    ob = get_open_banking_data(customer_id)
-    if ob:
-        if ob.get("gambling_transactions_30d", 0) > 0:
-            indicators.append({"type": "Behavioural", "detail": "Gambling transactions detected in banking data", "severity": "High"})
-            risk_level = "High"
-        if ob.get("available_for_repayment", 999) < 50:
-            indicators.append({"type": "Financial", "detail": "Very low disposable income for repayment", "severity": "High"})
-            risk_level = "High"
+    if int(c.get("contact_attempts_30d", 0)) >= 6:
+        indicators.append({"type": "Compliance", "detail": f"{c.get('contact_attempts_30d')} contact attempts — approaching limit", "severity": "Medium"})
 
     if not indicators:
         indicators.append({"type": "None", "detail": "No vulnerability indicators detected", "severity": "None"})
+
+    approach = "Specialist handler + breathing space + debt advice referral" if risk_level == "High" else "Enhanced monitoring + sensitive tone" if risk_level == "Medium" else "Standard pathway"
 
     return {
         "customer_id": customer_id,
         "vulnerability_risk_level": risk_level,
         "indicators": indicators,
         "fca_action_required": risk_level in ("High", "Medium"),
-        "recommended_approach": _vulnerability_approach(risk_level),
-        "compliance_note": "FCA Consumer Duty: Firms must act to deliver good outcomes for customers, especially those in vulnerable circumstances.",
+        "recommended_approach": approach,
+        "source": "Local rules fallback (LLM unavailable)",
+        "compliance_note": "FCA Consumer Duty: Firms must act to deliver good outcomes for customers.",
     }
-
-
-def _vulnerability_approach(risk_level: str) -> str:
-    if risk_level == "High":
-        return "Assign specialist vulnerable customer handler. Pause automated collections. Offer breathing space and debt advice referrals (StepChange, Citizens Advice)."
-    elif risk_level == "Medium":
-        return "Flag for enhanced monitoring. Use sensitive communication tone. Proactively offer payment flexibility."
-    return "Standard collections pathway. Monitor for emerging vulnerability signals."
 
 
 def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:

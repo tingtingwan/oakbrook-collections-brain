@@ -21,7 +21,8 @@ flowchart TB
     subgraph L2["LLM — Claude Sonnet 4.6 via FMAPI"]
         direction LR
         AGENT["Agent Chat<br/><i>Tool-calling orchestration</i>"]
-        COMMS["Comms Generation<br/><i>LLM-personalised messages</i>"]
+        COMMS["Comms Generation<br/><i>Personalised WhatsApp/SMS</i>"]
+        VULN["Vulnerability Assessment<br/><i>FCA Consumer Duty</i>"]
     end
 
     subgraph L3["ML MODELS — MLflow Model Serving"]
@@ -33,21 +34,19 @@ flowchart TB
     subgraph L4["DATA — UC Feature Tables"]
         direction LR
         C360["customer_360<br/><i>100 customers<br/>Feature Table + PK</i>"]
-        PAY["payment_history<br/><i>~400 records<br/>SQL Connector</i>"]
-        OB["open_banking_data<br/><i>~50 records<br/>SQL Connector</i>"]
+        PAY["payment_history<br/><i>~400 records</i>"]
+        OB["open_banking_data<br/><i>~50 records</i>"]
     end
 
-    subgraph L5["BUSINESS RULES — Local Logic"]
-        direction LR
-        SC["Scorecard<br/><i>6 segments<br/>Local rules</i>"]
-        VUL["Vulnerability<br/><i>FCA checks<br/>Local rules</i>"]
+    subgraph L5["SCORECARD — UC SQL Function"]
+        SC["collection_scorecard<br/><i>Oakbrook-defined rules<br/>6 segments · SQL logic<br/>MCP Server pattern</i>"]
     end
 
     subgraph L6["GOVERNANCE — Unity Catalog"]
         direction LR
-        APQ["Approval Queue<br/><i>UC Delta Table</i>"]
-        MLF["MLflow 3.0<br/><i>Experiment tracking<br/>Model registry<br/>Agent tracing</i>"]
-        UC["Unity Catalog<br/><i>Governance<br/>Lineage</i>"]
+        APQ["Approval Queue<br/><i>UC Delta Table<br/>Human-in-the-loop</i>"]
+        MLF["MLflow 3.0<br/><i>Experiments · Registry<br/>Model Serving · Tracing</i>"]
+        UC["Unity Catalog<br/><i>Governance · Lineage</i>"]
     end
 
     subgraph L7["OUTPUT CHANNELS"]
@@ -65,14 +64,16 @@ flowchart TB
         FTP["SFTP / Mailchimp"]
     end
 
-    APP --> AGENT & COMMS
+    APP --> AGENT
     AGENT --> PTP & BTC
     AGENT --> C360 & PAY & OB
-    AGENT --> SC & VUL
+    AGENT --> SC & VULN
+    AGENT --> COMMS
     COMMS -->|"submit"| APQ
     APQ -->|"approved"| WA & SMS2 & EMAIL
     L3 -.->|"registered in"| MLF
     C360 -.-> UC
+    SC -.->|"reads from"| C360
     APQ -.-> UC
     ICE & ZEN & FTP --> C360
     CS --> OB
@@ -80,13 +81,13 @@ flowchart TB
     style APP fill:#1a365d,stroke:#1a365d,color:#fff
     style AGENT fill:#0d2b4e,stroke:#07192e,color:#fff
     style COMMS fill:#0d2b4e,stroke:#07192e,color:#fff
+    style VULN fill:#0d2b4e,stroke:#07192e,color:#fff
     style PTP fill:#276749,stroke:#22543d,color:#fff
     style BTC fill:#276749,stroke:#22543d,color:#fff
     style C360 fill:#2b6cb0,stroke:#2a4365,color:#fff
     style PAY fill:#2b6cb0,stroke:#2a4365,color:#fff
     style OB fill:#2b6cb0,stroke:#2a4365,color:#fff
-    style SC fill:#718096,stroke:#4a5568,color:#fff
-    style VUL fill:#718096,stroke:#4a5568,color:#fff
+    style SC fill:#805ad5,stroke:#6b46c1,color:#fff
     style APQ fill:#c05621,stroke:#9c4221,color:#fff
     style MLF fill:#c05621,stroke:#9c4221,color:#fff
     style UC fill:#c05621,stroke:#9c4221,color:#fff
@@ -102,7 +103,7 @@ flowchart TB
     style L2 fill:#e8edf7,stroke:#1a3a5c,stroke-width:2px,color:#1a3a5c
     style L3 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
     style L4 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
-    style L5 fill:#edf2f7,stroke:#718096,stroke-width:1px,color:#4a5568
+    style L5 fill:#f3e8ff,stroke:#805ad5,stroke-width:2px,color:#3b0764
     style L6 fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#431407
     style L7 fill:#f0fff4,stroke:#25d366,stroke-width:2px,color:#128c7e
     style L8 fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#431407
