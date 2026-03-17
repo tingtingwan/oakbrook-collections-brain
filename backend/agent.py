@@ -561,7 +561,8 @@ async def _run_agent_inner(messages: list[dict]) -> dict:
 async def run_agent_stream(messages: list[dict]):
     """
     Run the collections agent with streaming output.
-    Yields events: tool_call (during tool execution), token (streaming text), done.
+    Uses the non-streaming run_agent for the full tool loop (reliable),
+    then streams the final response character-by-character for UX.
     """
     client, model = get_llm_client()
     full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
@@ -569,8 +570,8 @@ async def run_agent_stream(messages: list[dict]):
     trace = []
     max_iterations = 10
 
+    # Run the full tool-calling loop non-streamed for reliability
     for i in range(max_iterations):
-        # First, do tool-calling (non-streamed) to resolve all tools
         response = client.chat.completions.create(
             model=model,
             messages=full_messages,
@@ -581,6 +582,7 @@ async def run_agent_stream(messages: list[dict]):
         choice = response.choices[0]
 
         if choice.finish_reason == "tool_calls" or (choice.message.tool_calls and len(choice.message.tool_calls) > 0):
+            # If the LLM also included text content alongside tool calls, add it to messages
             full_messages.append(choice.message)
 
             for tc in choice.message.tool_calls:
@@ -595,7 +597,7 @@ async def run_agent_stream(messages: list[dict]):
                 }
                 trace.append(trace_entry)
 
-                # Yield tool call event so frontend can show progress
+                # Yield tool call event so frontend shows real-time progress
                 yield {"type": "tool_call", "data": trace_entry}
 
                 result = _execute_tool(fn_name, fn_args)
@@ -606,21 +608,13 @@ async def run_agent_stream(messages: list[dict]):
                     "content": result,
                 })
         else:
-            # Final response — stream it token by token
-            stream = client.chat.completions.create(
-                model=model,
-                messages=full_messages,
-                stream=True,
-            )
+            # Final text response — stream it in chunks for progressive display
+            final_text = choice.message.content or ""
+            chunk_size = 12  # ~12 chars at a time for smooth streaming feel
+            for j in range(0, len(final_text), chunk_size):
+                yield {"type": "token", "data": final_text[j:j + chunk_size]}
 
-            full_response = ""
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    token = chunk.choices[0].delta.content
-                    full_response += token
-                    yield {"type": "token", "data": token}
-
-            yield {"type": "done", "data": full_response}
+            yield {"type": "done", "data": final_text}
             return
 
     yield {"type": "done", "data": "Agent reached maximum iterations."}
