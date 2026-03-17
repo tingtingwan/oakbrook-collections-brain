@@ -19,16 +19,14 @@ from backend.data import (
     assess_vulnerability, generate_communication,
 )
 from backend.memory import ConversationMemory
+from backend.approvals import submit_approval, list_approvals as get_approvals, update_approval_status, get_next_id
 
 app = FastAPI(title="Oakbrook Collections Brain")
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
-# Conversation + approval memory
+# Conversation memory
 memory = ConversationMemory()
-
-# In-memory approval queue (Lakebase in production)
-approval_queue: list[dict] = []
 
 
 # ---------------------------------------------------------------------------
@@ -119,9 +117,9 @@ class ApprovalRequest(BaseModel):
 
 @app.post("/api/approvals")
 async def submit_for_approval(req: ApprovalRequest):
-    """Submit a generated communication to the approval queue (Lakebase)."""
+    """Submit a generated communication to the approval queue (UC Delta table)."""
     entry = {
-        "id": f"APR-{len(approval_queue)+1:04d}",
+        "id": get_next_id(),
         "customer_id": req.customer_id,
         "customer_name": req.customer_name,
         "channel": req.channel,
@@ -134,40 +132,31 @@ async def submit_for_approval(req: ApprovalRequest):
         "reviewed_by": None,
         "reviewed_at": None,
     }
-    approval_queue.append(entry)
-    # Also save to memory (would be Lakebase in prod)
-    memory.save_message("approvals", "system", json.dumps(entry))
-    return entry
+    return submit_approval(entry)
 
 
 @app.get("/api/approvals")
-async def list_approvals():
-    """List all pending and processed approvals."""
-    return approval_queue
+async def list_approvals_endpoint():
+    """List all pending and processed approvals from UC."""
+    return get_approvals()
 
 
 @app.post("/api/approvals/{approval_id}/approve")
 async def approve_comms(approval_id: str):
-    """Approve a communication — marks as approved, ready to send."""
-    for entry in approval_queue:
-        if entry["id"] == approval_id:
-            entry["status"] = "Approved"
-            entry["reviewed_by"] = "Manager"
-            entry["reviewed_at"] = datetime.now().isoformat()
-            return entry
-    return JSONResponse(status_code=404, content={"error": "Approval not found"})
+    """Approve a communication in UC — ready to send to WhatsApp."""
+    result = update_approval_status(approval_id, "Approved")
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Approval not found"})
+    return result
 
 
 @app.post("/api/approvals/{approval_id}/reject")
 async def reject_comms(approval_id: str):
-    """Reject a communication."""
-    for entry in approval_queue:
-        if entry["id"] == approval_id:
-            entry["status"] = "Rejected"
-            entry["reviewed_by"] = "Manager"
-            entry["reviewed_at"] = datetime.now().isoformat()
-            return entry
-    return JSONResponse(status_code=404, content={"error": "Approval not found"})
+    """Reject a communication in UC."""
+    result = update_approval_status(approval_id, "Rejected")
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Approval not found"})
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -161,6 +161,32 @@ print(f"Created {CATALOG}.{SCHEMA}.open_banking_data with {df_ob.count()} rows")
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## 4. Approval Queue Table (UC-backed governance layer)
+
+# COMMAND ----------
+
+spark.sql(f"""
+CREATE TABLE IF NOT EXISTS {CATALOG}.{SCHEMA}.approval_queue (
+    id STRING,
+    customer_id STRING,
+    customer_name STRING,
+    channel STRING,
+    tone STRING,
+    message STRING,
+    strategy_summary STRING,
+    status STRING,
+    submitted_at STRING,
+    submitted_by STRING,
+    reviewed_by STRING,
+    reviewed_at STRING
+) USING DELTA
+""")
+
+print(f"Created {CATALOG}.{SCHEMA}.approval_queue")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Verify all tables
 
 # COMMAND ----------
