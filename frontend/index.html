@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Oakbrook Collections Brain</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         :root {
             --primary: #1a365d;
@@ -118,8 +119,26 @@
         .message { max-width: 85%; padding: 14px 18px; border-radius: 12px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; }
         .message.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
         .message.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-        .message.assistant .content { white-space: pre-wrap; }
+        .message.assistant .content { white-space: normal; }
         .message.assistant .content strong, .message.assistant .content b { font-weight: 600; }
+        .message.assistant .content h1 { font-size: 17px; color: var(--primary); margin: 16px 0 8px; font-weight: 700; }
+        .message.assistant .content h2 { font-size: 15px; color: var(--primary); margin: 14px 0 6px; font-weight: 600; }
+        .message.assistant .content h3 { font-size: 14px; color: var(--primary); margin: 12px 0 4px; font-weight: 600; }
+        .message.assistant .content p { margin: 6px 0; line-height: 1.6; }
+        .message.assistant .content ul, .message.assistant .content ol { margin: 6px 0; padding-left: 24px; }
+        .message.assistant .content li { margin: 3px 0; line-height: 1.5; }
+        .message.assistant .content table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
+        .message.assistant .content th { background: var(--primary); color: white; padding: 8px 12px; text-align: left; font-weight: 600; }
+        .message.assistant .content td { padding: 6px 12px; border-bottom: 1px solid var(--border); }
+        .message.assistant .content tr:nth-child(even) { background: #f7fafc; }
+        .message.assistant .content tr:hover { background: #edf2f7; }
+        .message.assistant .content code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: 'SF Mono', Monaco, Consolas, monospace; }
+        .message.assistant .content pre { background: #1a202c; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
+        .message.assistant .content pre code { background: none; color: inherit; padding: 0; }
+        .message.assistant .content blockquote { border-left: 3px solid var(--primary-light); padding: 8px 16px; margin: 10px 0; background: #f0f4ff; border-radius: 0 6px 6px 0; color: var(--text); }
+        .message.assistant .content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+        .message.assistant .content a { color: var(--primary-light); text-decoration: none; }
+        .message.assistant .content a:hover { text-decoration: underline; }
 
         .trace-toggle { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--primary-light); cursor: pointer; user-select: none; }
         .trace-toggle:hover { text-decoration: underline; }
@@ -705,18 +724,29 @@
             }
         }
 
+        function renderMarkdown(text) {
+            if (typeof marked !== 'undefined' && marked.parse) {
+                return marked.parse(text, { breaks: true, gfm: true });
+            }
+            // Fallback if marked hasn't loaded
+            let html = escapeHtml(text);
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            return html;
+        }
+
         function appendMessage(role, content, trace) {
             const container = document.getElementById('messages');
             const div = document.createElement('div');
             div.className = `message ${role}`;
 
-            let html = escapeHtml(content);
+            let html;
             if (role === 'assistant') {
-                html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;color:#1a365d;">$1</strong>');
-                html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;color:#1a365d;">$1</strong>');
-                html = html.replace(/^- (.+)$/gm, '&nbsp;&nbsp;&#8226; $1');
-                html = html.replace(/^(\d+)\. (.+)$/gm, '&nbsp;&nbsp;$1. $2');
+                html = renderMarkdown(content);
+            } else {
+                html = escapeHtml(content);
             }
 
             let traceHtml = '';
@@ -779,12 +809,7 @@
 
         function updateStreamContent(div, text) {
             const contentEl = div.querySelector('.content');
-            let html = escapeHtml(text);
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;color:#1a365d;">$1</strong>');
-            html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;color:#1a365d;">$1</strong>');
-            html = html.replace(/^- (.+)$/gm, '&nbsp;&nbsp;&#8226; $1');
-            contentEl.innerHTML = html;
+            contentEl.innerHTML = renderMarkdown(text);
             div.closest('.messages').scrollTop = div.closest('.messages').scrollHeight;
         }
 
