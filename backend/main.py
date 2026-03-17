@@ -43,29 +43,91 @@ except Exception:
     MLFLOW_AVAILABLE = False
 
 
+_trace_token_cache = {"host": None, "token": None}
+
+def _get_trace_token():
+    if _trace_token_cache["token"]:
+        return _trace_token_cache["host"], _trace_token_cache["token"]
+    try:
+        host = os.environ.get("DATABRICKS_HOST", "").replace("https://", "").replace("http://", "")
+        if not host:
+            return None, None
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient(host=f"https://{host}")
+        token = None
+        if hasattr(w.config, 'token') and w.config.token:
+            token = w.config.token
+        else:
+            auth_result = w.config.authenticate()
+            headers = auth_result() if callable(auth_result) else auth_result if isinstance(auth_result, dict) else {}
+            token = headers.get("Authorization", "").replace("Bearer ", "")
+        if token:
+            _trace_token_cache["host"] = host
+            _trace_token_cache["token"] = token
+        return host, token
+    except Exception:
+        return None, None
+
+
 def log_trace(name: str, inputs: dict, outputs: dict):
-    """Log a trace to MLflow using the client API directly."""
-    if not MLFLOW_AVAILABLE:
-        return
+    """Log a trace to MLflow via REST API. Start trace → End trace."""
     try:
         import time
-        ts = int(time.time() * 1000)
-        client = mlflow.MlflowClient()
-        # Create trace info
-        trace_info = client.start_trace(
-            name=name,
-            experiment_id="1734200624343198",
-            inputs=inputs,
+        import requests as _req
+        host, token = _get_trace_token()
+        if not host or not token:
+            return
+
+        ts_start = int(time.time() * 1000)
+        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+        # Start trace
+        start_resp = _req.post(
+            f"https://{host}/api/2.0/mlflow/traces",
+            headers=hdrs,
+            json={
+                "experiment_id": "1734200624343198",
+                "timestamp_ms": ts_start,
+                "execution_time_ms": 0,
+                "status": "IN_PROGRESS",
+                "request_metadata": [
+                    {"key": "mlflow.traceName", "value": name},
+                    {"key": "mlflow.traceInputs", "value": json.dumps(inputs)},
+                ],
+                "tags": [
+                    {"key": "tool", "value": name},
+                    {"key": "customer_id", "value": str(inputs.get("customer_id", ""))},
+                    {"key": "app", "value": "oakbrook-collections-brain"},
+                ],
+            },
+            timeout=5,
         )
-        request_id = trace_info.request_id
-        # End the trace
-        client.end_trace(
-            request_id=request_id,
-            outputs=outputs,
+
+        if start_resp.status_code != 200:
+            return
+
+        trace_id = start_resp.json().get("trace_info", {}).get("request_id", "")
+        if not trace_id:
+            return
+
+        # End trace
+        ts_end = int(time.time() * 1000)
+        _req.patch(
+            f"https://{host}/api/2.0/mlflow/traces/{trace_id}",
+            headers=hdrs,
+            json={
+                "status": "OK",
+                "timestamp_ms": ts_end,
+                "request_metadata": [
+                    {"key": "mlflow.traceName", "value": name},
+                    {"key": "mlflow.traceInputs", "value": json.dumps(inputs)},
+                    {"key": "mlflow.traceOutputs", "value": json.dumps(outputs)},
+                ],
+            },
+            timeout=5,
         )
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).debug(f"Trace logging failed: {e}")
+    except Exception:
+        pass
 
 
 @app.get("/api/customers")
