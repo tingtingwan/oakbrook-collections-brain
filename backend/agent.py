@@ -18,14 +18,93 @@ import os
 import logging
 from openai import OpenAI
 
-# MLflow 3.0 Tracing — real traces logged to workspace
-try:
-    import mlflow
-    from mlflow.entities import SpanType
-    mlflow.set_experiment("/Shared/oakbrook-collections-brain-traces")
-    MLFLOW_AVAILABLE = True
-except Exception:
-    MLFLOW_AVAILABLE = False
+MLFLOW_AVAILABLE = False  # Using REST API tracing instead
+
+
+def _log_agent_trace(user_query: str, trace: list[dict], response_text: str):
+    """Log the full agent run as an MLflow trace via REST API."""
+    try:
+        import time
+        import requests as _req
+
+        host = os.environ.get("DATABRICKS_HOST", "").replace("https://", "").replace("http://", "")
+        if not host:
+            return
+
+        from databricks.sdk import WorkspaceClient
+        w = WorkspaceClient(host=f"https://{host}")
+        token = None
+        if hasattr(w.config, 'token') and w.config.token:
+            token = w.config.token
+        else:
+            auth_result = w.config.authenticate()
+            headers = auth_result() if callable(auth_result) else auth_result if isinstance(auth_result, dict) else {}
+            token = headers.get("Authorization", "").replace("Bearer ", "")
+
+        if not token:
+            return
+
+        hdrs = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        ts_start = int(time.time() * 1000)
+
+        # Build trace inputs/outputs
+        tool_summary = " → ".join([t["tool"] for t in trace])
+        inputs_json = json.dumps({
+            "query": user_query[:200],
+            "tool_count": len(trace),
+        })
+        outputs_json = json.dumps({
+            "tools_called": tool_summary,
+            "response_length": len(response_text),
+            "response_preview": response_text[:200],
+        })
+
+        # Start trace
+        start_resp = _req.post(
+            f"https://{host}/api/2.0/mlflow/traces",
+            headers=hdrs,
+            json={
+                "experiment_id": "1734200624343198",
+                "timestamp_ms": ts_start,
+                "status": "IN_PROGRESS",
+                "request_metadata": [
+                    {"key": "mlflow.traceName", "value": "collections_brain_agent"},
+                    {"key": "mlflow.traceInputs", "value": inputs_json},
+                ],
+                "tags": [
+                    {"key": "app", "value": "oakbrook-collections-brain"},
+                    {"key": "tool_count", "value": str(len(trace))},
+                    {"key": "tools", "value": tool_summary[:200]},
+                ],
+            },
+            timeout=5,
+        )
+        if start_resp.status_code != 200:
+            return
+
+        trace_id = start_resp.json().get("trace_info", {}).get("request_id", "")
+        if not trace_id:
+            return
+
+        # End trace
+        ts_end = int(time.time() * 1000)
+        _req.patch(
+            f"https://{host}/api/2.0/mlflow/traces/{trace_id}",
+            headers=hdrs,
+            json={
+                "status": "OK",
+                "timestamp_ms": ts_end,
+                "request_metadata": [
+                    {"key": "mlflow.traceName", "value": "collections_brain_agent"},
+                    {"key": "mlflow.traceInputs", "value": inputs_json},
+                    {"key": "mlflow.traceOutputs", "value": outputs_json},
+                ],
+            },
+            timeout=5,
+        )
+        logger.info(f"Agent trace logged: {trace_id} ({len(trace)} tool calls)")
+    except Exception as e:
+        logger.debug(f"Agent trace logging failed: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -467,23 +546,20 @@ def get_llm_client():
 async def run_agent(messages: list[dict]) -> dict:
     """
     Run the collections agent with tool-calling loop.
-    Returns the final assistant message and tool call trace (MLflow 3.0).
+    Returns the final assistant message and tool call trace.
+    Logs the full trace to MLflow via REST API.
     """
-    # Start MLflow trace for the entire agent run
-    if MLFLOW_AVAILABLE:
-        try:
-            return await _run_agent_traced(messages)
-        except Exception as e:
-            logger.warning(f"MLflow tracing failed, running without: {e}")
-    return await _run_agent_inner(messages)
+    result = await _run_agent_inner(messages)
 
+    # Log trace to MLflow (non-blocking)
+    user_query = ""
+    for m in reversed(messages):
+        if m["role"] == "user":
+            user_query = m["content"]
+            break
+    _log_agent_trace(user_query, result.get("trace", []), result.get("response", ""))
 
-async def _run_agent_traced(messages: list[dict]) -> dict:
-    with mlflow.start_span(name="collections_brain_agent", span_type=SpanType.AGENT) as span:
-        span.set_inputs({"messages": [{"role": m["role"], "content": m["content"][:100]} for m in messages]})
-        result = await _run_agent_inner(messages)
-        span.set_outputs({"response_length": len(result.get("response", "")), "tool_calls": len(result.get("trace", []))})
-        return result
+    return result
 
 
 async def _run_agent_inner(messages: list[dict]) -> dict:
@@ -495,32 +571,12 @@ async def _run_agent_inner(messages: list[dict]) -> dict:
     max_iterations = 10
 
     for i in range(max_iterations):
-        # Log LLM call as a span
-        if MLFLOW_AVAILABLE:
-            try:
-                with mlflow.start_span(name=f"llm_call_{i+1}", span_type=SpanType.LLM) as span:
-                    span.set_inputs({"model": model, "message_count": len(full_messages), "iteration": i + 1})
-                    response = client.chat.completions.create(
-                        model=model,
-                        messages=full_messages,
-                        tools=TOOLS,
-                        tool_choice="auto",
-                    )
-                    span.set_outputs({"finish_reason": response.choices[0].finish_reason})
-            except Exception:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=full_messages,
-                    tools=TOOLS,
-                    tool_choice="auto",
-                )
-        else:
-            response = client.chat.completions.create(
-                model=model,
-                messages=full_messages,
-                tools=TOOLS,
-                tool_choice="auto",
-            )
+        response = client.chat.completions.create(
+            model=model,
+            messages=full_messages,
+            tools=TOOLS,
+            tool_choice="auto",
+        )
 
         choice = response.choices[0]
 
@@ -613,6 +669,14 @@ async def run_agent_stream(messages: list[dict]):
             chunk_size = 12  # ~12 chars at a time for smooth streaming feel
             for j in range(0, len(final_text), chunk_size):
                 yield {"type": "token", "data": final_text[j:j + chunk_size]}
+
+            # Log trace to MLflow
+            user_query = ""
+            for m in reversed(messages):
+                if m["role"] == "user":
+                    user_query = m["content"]
+                    break
+            _log_agent_trace(user_query, trace, final_text)
 
             yield {"type": "done", "data": final_text}
             return
