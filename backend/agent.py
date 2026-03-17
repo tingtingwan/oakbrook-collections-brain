@@ -22,7 +22,7 @@ from openai import OpenAI
 try:
     import mlflow
     from mlflow.entities import SpanType
-    mlflow.set_experiment("/Users/tingting.wan@databricks.com/oakbrook-collections-brain")
+    mlflow.set_experiment("/Shared/oakbrook-collections-brain-traces")
     MLFLOW_AVAILABLE = True
 except Exception:
     MLFLOW_AVAILABLE = False
