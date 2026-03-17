@@ -141,11 +141,10 @@ with mlflow.start_run(run_name="propensity_to_pay_v3.2.1") as run:
     for feat, imp in zip(feature_cols, model.feature_importances_):
         mlflow.log_metric(f"importance_{feat}", imp)
 
-    # Log model
+    # Log model (without UC registration for speed — register separately)
     mlflow.sklearn.log_model(
         model,
         artifact_path="model",
-        registered_model_name=f"{CATALOG}.{SCHEMA}.propensity_to_pay",
         input_example=pd.DataFrame([X[0]], columns=feature_cols),
     )
 
@@ -192,7 +191,6 @@ with mlflow.start_run(run_name="best_time_to_contact_v2.1.0") as run:
     mlflow.sklearn.log_model(
         model_btc,
         artifact_path="model",
-        registered_model_name=f"{CATALOG}.{SCHEMA}.best_time_to_contact",
         input_example=pd.DataFrame([X_btc[0]], columns=["employment_encoded", "contact_attempts_30d", "age", "days_past_due"]),
     )
 
@@ -202,7 +200,29 @@ with mlflow.start_run(run_name="best_time_to_contact_v2.1.0") as run:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 5: Verify Models in Registry
+# MAGIC ## Step 5: Register Models in Unity Catalog
+# MAGIC
+# MAGIC This registers the trained models in the UC Model Registry.
+# MAGIC From the Registry you can then deploy to Model Serving endpoints.
+
+# COMMAND ----------
+
+import mlflow
+
+# Register PTP model
+ptp_model_uri = f"runs:/{ptp_run_id}/model"
+result = mlflow.register_model(ptp_model_uri, f"{CATALOG}.{SCHEMA}.propensity_to_pay")
+print(f"✅ Registered propensity_to_pay: version {result.version}")
+
+# Register BTC model
+btc_model_uri = f"runs:/{btc_run_id}/model"
+result = mlflow.register_model(btc_model_uri, f"{CATALOG}.{SCHEMA}.best_time_to_contact")
+print(f"✅ Registered best_time_to_contact: version {result.version}")
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## Step 6: Verify Models in Registry
 
 # COMMAND ----------
 
