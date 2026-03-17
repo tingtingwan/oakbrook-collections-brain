@@ -18,7 +18,7 @@
             --border: #e2e8f0;
             --text: #2d3748;
             --text-light: #718096;
-            --sidebar-width: 340px;
+            --sidebar-width: 320px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,19 +58,21 @@
         .header-tab {
             padding: 8px 16px;
             border-radius: 6px;
+            cursor: pointer;
             font-size: 13px;
             font-weight: 500;
-            cursor: pointer;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: transparent;
-            color: rgba(255,255,255,0.7);
             transition: all 0.15s;
+            color: rgba(255,255,255,0.7);
         }
         .header-tab:hover { background: rgba(255,255,255,0.1); color: white; }
-        .header-tab.active { background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.4); }
+        .header-tab.active { background: rgba(255,255,255,0.2); color: white; }
 
         /* Main layout */
-        .main { display: flex; flex: 1; overflow: hidden; }
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
 
         /* Sidebar */
         .sidebar {
@@ -79,124 +81,618 @@
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            flex-shrink: 0;
         }
         .sidebar-header {
             padding: 16px;
-            border-bottom: 1px solid var(--border);
             font-weight: 600;
             font-size: 14px;
+            border-bottom: 1px solid var(--border);
             color: var(--primary);
         }
-        .customer-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .customer-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
         .customer-card {
             padding: 12px;
-            border-radius: 8px;
             border: 1px solid var(--border);
+            border-radius: 8px;
             margin-bottom: 8px;
             cursor: pointer;
             transition: all 0.15s;
         }
         .customer-card:hover { border-color: var(--primary-light); background: #f0f4ff; }
-        .customer-card.selected { border-color: var(--primary); background: #ebf0ff; }
+        .customer-card.selected { border-color: var(--accent); background: #f0fdf4; box-shadow: 0 0 0 2px rgba(56,161,105,0.2); }
         .customer-card .name { font-weight: 600; font-size: 14px; }
-        .customer-card .product { font-size: 12px; color: var(--text-light); }
-        .customer-card .meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-        .customer-card .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
-        .tag-low { background: #c6f6d5; color: #22543d; }
+        .customer-card .product { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+        .customer-card .meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+        .tag-high { background: #fed7d7; color: #9b2c2c; }
         .tag-medium { background: #fefcbf; color: #744210; }
-        .tag-high { background: #fed7d7; color: #822727; }
-        .tag-dpd { background: #e2e8f0; color: #4a5568; }
+        .tag-low { background: #c6f6d5; color: #22543d; }
+        .tag-dpd { background: #e9d8fd; color: #553c9a; }
         .tag-balance { background: #bee3f8; color: #2a4365; }
 
         /* Tab panels */
-        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
-        .tab-panel.active { display: flex; }
+        .tab-panel { display: none; flex: 1; overflow: hidden; }
+        .tab-panel.active { display: flex; flex-direction: column; }
 
-        /* Chat area */
-        .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .message { max-width: 85%; padding: 14px 18px; border-radius: 12px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; }
-        .message.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
-        .message.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-        .message.assistant .content { white-space: normal; }
-        .message.assistant .content strong, .message.assistant .content b { font-weight: 600; }
-        .message.assistant .content h1 { font-size: 17px; color: var(--primary); margin: 16px 0 8px; font-weight: 700; }
-        .message.assistant .content h2 { font-size: 15px; color: var(--primary); margin: 14px 0 6px; font-weight: 600; }
-        .message.assistant .content h3 { font-size: 14px; color: var(--primary); margin: 12px 0 4px; font-weight: 600; }
-        .message.assistant .content p { margin: 6px 0; line-height: 1.6; }
-        .message.assistant .content ul, .message.assistant .content ol { margin: 6px 0; padding-left: 24px; }
-        .message.assistant .content li { margin: 3px 0; line-height: 1.5; }
-        .message.assistant .content table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 13px; }
-        .message.assistant .content th { background: var(--primary); color: white; padding: 8px 12px; text-align: left; font-weight: 600; }
-        .message.assistant .content td { padding: 6px 12px; border-bottom: 1px solid var(--border); }
-        .message.assistant .content tr:nth-child(even) { background: #f7fafc; }
-        .message.assistant .content tr:hover { background: #edf2f7; }
-        .message.assistant .content code { background: #edf2f7; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: 'SF Mono', Monaco, Consolas, monospace; }
-        .message.assistant .content pre { background: #1a202c; color: #e2e8f0; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 8px 0; }
-        .message.assistant .content pre code { background: none; color: inherit; padding: 0; }
-        .message.assistant .content blockquote { border-left: 3px solid var(--primary-light); padding: 8px 16px; margin: 10px 0; background: #f0f4ff; border-radius: 0 6px 6px 0; color: var(--text); }
-        .message.assistant .content hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
-        .message.assistant .content a { color: var(--primary-light); text-decoration: none; }
-        .message.assistant .content a:hover { text-decoration: underline; }
+        /* ======================== */
+        /* WORKBENCH TAB            */
+        /* ======================== */
+        .workbench {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .workbench-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-light);
+            text-align: center;
+        }
+        .workbench-empty h2 { margin-bottom: 8px; color: var(--text); }
+        .workbench-empty p { font-size: 14px; max-width: 400px; }
 
-        .trace-toggle { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--primary-light); cursor: pointer; user-select: none; }
-        .trace-toggle:hover { text-decoration: underline; }
-        .trace-panel { display: none; margin-top: 8px; padding: 10px; background: #f7fafc; border-radius: 6px; font-size: 12px; font-family: 'SF Mono', Monaco, Consolas, monospace; border: 1px solid var(--border); }
-        .trace-panel.open { display: block; }
-        .trace-step { padding: 4px 0; border-bottom: 1px solid #edf2f7; }
-        .trace-step:last-child { border-bottom: none; }
-        .trace-tool { color: var(--accent); font-weight: 600; }
-        .trace-iter { color: var(--text-light); }
+        .workbench-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border);
+        }
+        .workbench-header h2 { font-size: 20px; }
+        .workbench-header .customer-meta {
+            font-size: 13px;
+            color: var(--text-light);
+        }
 
-        .welcome { text-align: center; padding: 60px 40px; color: var(--text-light); }
-        .welcome h2 { color: var(--primary); margin-bottom: 12px; font-size: 22px; }
-        .welcome p { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
-        .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-        .suggestion { background: var(--card); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
-        .suggestion:hover { border-color: var(--primary); background: #f0f4ff; }
-
-        .input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--card); display: flex; gap: 12px; align-items: flex-end; }
-        .input-area textarea { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; resize: none; outline: none; min-height: 44px; max-height: 120px; line-height: 1.4; }
-        .input-area textarea:focus { border-color: var(--primary); }
-        .input-area button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
-        .input-area button:hover { background: var(--primary-light); }
-        .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        .loading { display: flex; gap: 4px; padding: 8px 0; }
-        .loading span { width: 8px; height: 8px; background: var(--primary-light); border-radius: 50%; animation: bounce 1.2s infinite; }
-        .loading span:nth-child(2) { animation-delay: 0.2s; }
-        .loading span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-8px); } }
-
-        /* Architecture tab */
-        .arch-content { flex: 1; overflow-y: auto; padding: 32px; }
-        .arch-content h2 { color: var(--primary); font-size: 20px; margin-bottom: 20px; }
-        .arch-content h3 { color: var(--primary); font-size: 16px; margin: 24px 0 12px; }
-        .arch-diagram { text-align: center; margin: 24px 0; }
-        .arch-diagram img { max-width: 100%; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-        /* Component cards */
-        .component-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
-        .component-card {
+        /* Accordion sections */
+        .accordion-section {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 10px;
-            padding: 20px;
-            transition: all 0.15s;
-            border-left: 4px solid var(--border);
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: box-shadow 0.2s;
         }
-        .component-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
-        .component-card.cat-ml { border-left-color: #38a169; }
-        .component-card.cat-data { border-left-color: #3182ce; }
-        .component-card.cat-agent { border-left-color: #805ad5; }
-        .component-card.cat-govern { border-left-color: #dd6b20; }
-        .component-card.cat-app { border-left-color: #e53e3e; }
-        .component-card .comp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .accordion-section:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .accordion-header {
+            display: flex;
+            align-items: center;
+            padding: 14px 18px;
+            cursor: pointer;
+            user-select: none;
+            gap: 12px;
+            transition: background 0.15s;
+        }
+        .accordion-header:hover { background: #f9fafb; }
+        .accordion-chevron {
+            font-size: 12px;
+            color: var(--text-light);
+            transition: transform 0.25s ease;
+            flex-shrink: 0;
+        }
+        .accordion-section.open .accordion-chevron { transform: rotate(90deg); }
+        .accordion-title {
+            font-weight: 600;
+            font-size: 14px;
+            flex: 1;
+        }
+        .accordion-step {
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--primary);
+            color: white;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .source-badge {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .badge-ml { background: #e9d8fd; color: #553c9a; }
+        .badge-data { background: #bee3f8; color: #2a4365; }
+        .badge-agent { background: #fefcbf; color: #744210; }
+        .badge-govern { background: #fed7d7; color: #9b2c2c; }
+        .badge-app { background: #c6f6d5; color: #22543d; }
+        .badge-lakebase { background: #fbd38d; color: #7b341e; }
+
+        .accordion-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease;
+        }
+        .accordion-section.open .accordion-body { max-height: 2000px; }
+        .accordion-content {
+            padding: 0 18px 18px;
+        }
+
+        .run-btn {
+            padding: 8px 18px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+            flex-shrink: 0;
+        }
+        .run-btn:hover { background: var(--accent-hover); }
+        .run-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+        .run-btn.secondary {
+            background: var(--primary);
+        }
+        .run-btn.secondary:hover { background: var(--primary-light); }
+
+        .submit-btn {
+            padding: 10px 24px;
+            background: var(--warning);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 16px;
+            transition: background 0.15s;
+        }
+        .submit-btn:hover { background: #c05621; }
+        .submit-btn:disabled { background: #a0aec0; cursor: not-allowed; }
+
+        /* Data display */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .data-card {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .data-card .label { font-size: 11px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+        .data-card .value { font-size: 16px; font-weight: 600; margin-top: 4px; }
+        .data-card .value.danger { color: var(--danger); }
+        .data-card .value.accent { color: var(--accent); }
+        .data-card .value.warning { color: var(--warning); }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+        .data-table th {
+            background: var(--primary);
+            color: white;
+            text-align: left;
+            padding: 10px 12px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .data-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table tr:nth-child(even) { background: #f9fafb; }
+        .data-table tr:hover { background: #f0f4ff; }
+
+        /* Spinner */
+        .spinner {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 0;
+            color: var(--text-light);
+            font-size: 13px;
+        }
+        .spinner::before {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Score gauges */
+        .score-row {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .score-card {
+            flex: 1;
+            min-width: 220px;
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .score-card .score-label { font-size: 12px; color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px; }
+        .score-card .score-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 8px 0;
+        }
+        .score-card .score-detail { font-size: 13px; color: var(--text-light); }
+        .score-high { color: var(--accent); }
+        .score-medium { color: var(--warning); }
+        .score-low { color: var(--danger); }
+
+        /* Vulnerability */
+        .vuln-card {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .vuln-level {
+            font-size: 28px;
+            font-weight: 700;
+            padding: 16px 28px;
+            border-radius: 10px;
+            text-align: center;
+            min-width: 160px;
+        }
+        .vuln-high { background: #fed7d7; color: #9b2c2c; }
+        .vuln-medium { background: #fefcbf; color: #744210; }
+        .vuln-low { background: #c6f6d5; color: #22543d; }
+        .vuln-details { flex: 1; }
+        .vuln-details ul { list-style: none; padding: 0; }
+        .vuln-details li { padding: 4px 0; font-size: 13px; }
+        .vuln-details li::before { content: '\25CF '; color: var(--warning); }
+
+        /* WhatsApp phone mockup */
+        .phone-mockup {
+            max-width: 380px;
+            margin: 12px auto 0;
+            background: #e5ddd5;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .phone-header {
+            background: #075e54;
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .phone-header .avatar {
+            width: 32px;
+            height: 32px;
+            background: #25d366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+        .phone-body {
+            padding: 16px;
+            min-height: 120px;
+        }
+        .wa-bubble {
+            background: #dcf8c6;
+            border-radius: 8px 8px 0 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            line-height: 1.5;
+            position: relative;
+            max-width: 90%;
+            margin-left: auto;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+        }
+        .wa-time {
+            text-align: right;
+            font-size: 10px;
+            color: #7c8e76;
+            margin-top: 4px;
+        }
+        .tone-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+        .tone-friendly { background: #c6f6d5; color: #22543d; }
+        .tone-empathetic { background: #bee3f8; color: #2a4365; }
+        .tone-formal { background: #e9d8fd; color: #553c9a; }
+        .tone-sensitive { background: #fed7d7; color: #9b2c2c; }
+
+        /* Strategy section */
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .strategy-box {
+            background: #f9fafb;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .strategy-box h4 {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        .strategy-box p, .strategy-box ul { font-size: 13px; }
+        .strategy-box ul { padding-left: 18px; }
+        .strategy-box li { margin-bottom: 4px; }
+
+        /* ======================== */
+        /* APPROVAL QUEUE TAB       */
+        /* ======================== */
+        .approval-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .approval-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .approval-header h2 { font-size: 20px; }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-pending { background: #fefcbf; color: #744210; }
+        .status-approved { background: #c6f6d5; color: #22543d; }
+        .status-rejected { background: #fed7d7; color: #9b2c2c; }
+
+        .approve-btn {
+            padding: 5px 14px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 6px;
+        }
+        .approve-btn:hover { background: var(--accent-hover); }
+        .reject-btn {
+            padding: 5px 14px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .reject-btn:hover { background: #c53030; }
+
+        /* ======================== */
+        /* CHAT TAB                 */
+        /* ======================== */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .welcome {
+            text-align: center;
+            margin-top: 80px;
+            color: var(--text-light);
+        }
+        .welcome h2 { color: var(--text); margin-bottom: 8px; }
+        .welcome p { font-size: 14px; margin-bottom: 8px; }
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 24px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .suggestion {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion:hover { border-color: var(--primary-light); background: #f0f4ff; }
+        .input-area {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px;
+            background: var(--card);
+        }
+        .input-area textarea {
+            flex: 1;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            min-height: 40px;
+        }
+        .input-area textarea:focus { border-color: var(--primary-light); }
+        .input-area button {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.15s;
+        }
+        .input-area button:hover { background: var(--primary-light); }
+        .input-area button:disabled { background: #a0aec0; }
+
+        .message {
+            margin-bottom: 16px;
+            max-width: 85%;
+        }
+        .message.user {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px 12px 0 12px;
+        }
+        .message.assistant {
+            background: var(--card);
+            border: 1px solid var(--border);
+            padding: 16px;
+            border-radius: 12px;
+        }
+        .message.assistant .content h1, .message.assistant .content h2, .message.assistant .content h3 {
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+        .message.assistant .content p { margin-bottom: 8px; line-height: 1.6; }
+        .message.assistant .content ul, .message.assistant .content ol { margin: 8px 0; padding-left: 20px; }
+        .message.assistant .content table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+        .message.assistant .content th { background: var(--primary); color: white; padding: 8px 10px; text-align: left; }
+        .message.assistant .content td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+        .message.assistant .content tr:nth-child(even) { background: #f9fafb; }
+        .message.assistant .content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .message.assistant .content pre { background: #1a202c; color: #e2e8f0; padding: 14px; border-radius: 8px; overflow-x: auto; margin: 8px 0; }
+        .message.assistant .content pre code { background: none; color: inherit; padding: 0; }
+
+        /* Trace */
+        .trace-toggle {
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--primary-light);
+            cursor: pointer;
+            padding: 6px 10px;
+            background: #f0f4ff;
+            border-radius: 6px;
+        }
+        .trace-panel {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .trace-panel.open { max-height: 600px; overflow-y: auto; padding: 10px; background: #f9fafb; border-radius: 6px; margin-top: 6px; }
+        .trace-step { padding: 4px 0; border-bottom: 1px solid var(--border); }
+        .trace-iter { color: var(--text-light); margin-right: 8px; }
+        .trace-tool { color: var(--primary); font-weight: 600; }
+
+        .loading span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #a0aec0;
+            border-radius: 50%;
+            animation: bounce 1s infinite;
+            margin-right: 4px;
+        }
+        .loading span:nth-child(2) { animation-delay: 0.1s; }
+        .loading span:nth-child(3) { animation-delay: 0.2s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-6px); }
+        }
+
+        /* ======================== */
+        /* ARCHITECTURE TAB         */
+        /* ======================== */
+        .arch-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+        .arch-content h2 { margin-bottom: 8px; }
+        .arch-content h3 { margin-top: 24px; margin-bottom: 12px; color: var(--primary); }
+        .arch-diagram {
+            margin: 16px 0 24px;
+            text-align: center;
+        }
+        .arch-diagram img {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        /* ======================== */
+        /* HOW TO BUILD TAB         */
+        /* ======================== */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .component-card {
+            border-radius: 10px;
+            padding: 16px;
+            border-left: 4px solid #a0aec0;
+        }
+        .component-card.cat-ml { background: #faf5ff; border-left-color: #805ad5; }
+        .component-card.cat-agent { background: #fffff0; border-left-color: #d69e2e; }
+        .component-card.cat-data { background: #ebf8ff; border-left-color: #3182ce; }
+        .component-card.cat-govern { background: #fff5f5; border-left-color: #e53e3e; }
+        .component-card.cat-app { background: #f0fff4; border-left-color: #38a169; }
+        .component-card .comp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
         .component-card .comp-icon { font-size: 20px; }
-        .component-card .comp-title { font-weight: 600; font-size: 15px; color: var(--primary); }
-        .component-card .comp-desc { font-size: 13px; color: var(--text-light); line-height: 1.5; margin-bottom: 10px; }
-        .component-card .comp-tool { font-size: 12px; color: var(--accent); font-family: monospace; margin-bottom: 8px; }
+        .component-card .comp-title { font-weight: 600; font-size: 14px; }
+        .component-card .comp-tool { font-size: 12px; color: var(--text-light); font-family: monospace; margin-bottom: 6px; }
+        .component-card .comp-desc { font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
         .component-card .comp-link {
             display: inline-block;
             font-size: 12px;
@@ -244,11 +740,13 @@
     <div class="header">
         <div>
             <h1>Collections Brain</h1>
-            <div class="subtitle">AI-Powered Collections Strategy</div>
+            <div class="subtitle">AI-Powered Collections Workbench</div>
         </div>
         <span class="badge">DEMO</span>
         <div class="header-tabs">
-            <div class="header-tab active" onclick="switchTab('chat')">Agent Chat</div>
+            <div class="header-tab active" onclick="switchTab('workbench')">Workbench</div>
+            <div class="header-tab" onclick="switchTab('approvals')">Approval Queue</div>
+            <div class="header-tab" onclick="switchTab('chat')">Agent Chat</div>
             <div class="header-tab" onclick="switchTab('arch')">Architecture</div>
             <div class="header-tab" onclick="switchTab('build')">How to Build This</div>
         </div>
@@ -260,14 +758,172 @@
             <div class="customer-list" id="customerList"></div>
         </div>
 
-        <!-- TAB 1: Agent Chat -->
-        <div class="tab-panel active" id="tab-chat">
+        <!-- TAB 1: Workbench -->
+        <div class="tab-panel active" id="tab-workbench">
+            <div class="workbench" id="workbenchContent">
+                <div class="workbench-empty" id="workbenchEmpty">
+                    <h2>Collections Workbench</h2>
+                    <p>Select a customer from the portfolio to begin analysis. Each section loads independently — you control the pace.</p>
+                    <p style="font-size:12px;color:#a0aec0;margin-top:12px;">
+                        Feature Tables &bull; MLflow Model Serving &bull; MCP Server &bull; RAG Vector Search &bull; Lakebase
+                    </p>
+                </div>
+                <div id="workbenchActive" style="display:none;">
+                    <div class="workbench-header">
+                        <h2 id="wb-customer-name"></h2>
+                        <div class="customer-meta" id="wb-customer-meta"></div>
+                    </div>
+
+                    <!-- Section 1: Customer Profile -->
+                    <div class="accordion-section open" id="section-profile">
+                        <div class="accordion-header" onclick="toggleAccordion('profile')">
+                            <span class="accordion-step">1</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Customer Profile</span>
+                            <span class="source-badge badge-data">Feature Tables (Unity Catalog)</span>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-profile">
+                                <div class="spinner">Loading customer profile...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Payment History -->
+                    <div class="accordion-section" id="section-payments">
+                        <div class="accordion-header" onclick="toggleAccordion('payments')">
+                            <span class="accordion-step">2</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Payment History</span>
+                            <span class="source-badge badge-data">Structured Streaming</span>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-payments">
+                                <div class="spinner">Loading payment history...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: ML Model Scores -->
+                    <div class="accordion-section" id="section-ml">
+                        <div class="accordion-header" onclick="toggleAccordion('ml')">
+                            <span class="accordion-step">3</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">ML Model Scores</span>
+                            <span class="source-badge badge-ml">MLflow Model Serving</span>
+                            <button class="run-btn" onclick="event.stopPropagation(); runMLModels()">Run Models</button>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-ml">
+                                <p style="color:var(--text-light);font-size:13px;">Click "Run Models" to score propensity-to-pay and best-time-to-contact.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 4: Open Banking -->
+                    <div class="accordion-section" id="section-openbanking">
+                        <div class="accordion-header" onclick="toggleAccordion('openbanking')">
+                            <span class="accordion-step">4</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Open Banking</span>
+                            <span class="source-badge badge-data">ClearScore / Open Banking</span>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-openbanking">
+                                <div class="spinner">Loading Open Banking data...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 5: Vulnerability Assessment -->
+                    <div class="accordion-section" id="section-vulnerability">
+                        <div class="accordion-header" onclick="toggleAccordion('vulnerability')">
+                            <span class="accordion-step">5</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Vulnerability Assessment</span>
+                            <span class="source-badge badge-govern">FCA Consumer Duty Engine</span>
+                            <button class="run-btn" onclick="event.stopPropagation(); runVulnerability()">Run Assessment</button>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-vulnerability">
+                                <p style="color:var(--text-light);font-size:13px;">Click "Run Assessment" to evaluate vulnerability indicators.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 6: Collection Strategy -->
+                    <div class="accordion-section" id="section-strategy">
+                        <div class="accordion-header" onclick="toggleAccordion('strategy')">
+                            <span class="accordion-step">6</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Collection Strategy</span>
+                            <span class="source-badge badge-agent">MCP Server + Multi-Agent Supervisor</span>
+                            <button class="run-btn secondary" onclick="event.stopPropagation(); runStrategy()" id="btn-strategy">Generate Strategy</button>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-strategy">
+                                <p style="color:var(--text-light);font-size:13px;">Run ML Models first (step 3), then generate strategy.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 7: Draft Communication -->
+                    <div class="accordion-section" id="section-comms">
+                        <div class="accordion-header" onclick="toggleAccordion('comms')">
+                            <span class="accordion-step">7</span>
+                            <span class="accordion-chevron">&#9654;</span>
+                            <span class="accordion-title">Draft Communication</span>
+                            <span class="source-badge badge-agent">RAG (Vector Search)</span>
+                            <button class="run-btn" onclick="event.stopPropagation(); runComms()">Generate Message</button>
+                        </div>
+                        <div class="accordion-body">
+                            <div class="accordion-content" id="content-comms">
+                                <p style="color:var(--text-light);font-size:13px;">Click "Generate Message" to draft a personalised communication.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Approval Queue -->
+        <div class="tab-panel" id="tab-approvals">
+            <div class="approval-panel">
+                <div class="approval-header">
+                    <div>
+                        <h2>Approval Queue</h2>
+                        <p style="color:var(--text-light);font-size:13px;margin-top:4px;">Human-in-the-loop review before sending communications to customers.</p>
+                    </div>
+                    <span class="source-badge badge-lakebase" style="font-size:13px;padding:6px 14px;">Powered by Lakebase (PostgreSQL)</span>
+                </div>
+                <div id="approvalTableContainer">
+                    <table class="data-table" id="approvalTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Channel</th>
+                                <th>Tone</th>
+                                <th>Status</th>
+                                <th>Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvalBody">
+                            <tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:40px;">No communications submitted yet. Generate a message in the Workbench and submit for approval.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Agent Chat -->
+        <div class="tab-panel" id="tab-chat">
             <div class="chat-area">
                 <div class="messages" id="messages">
                     <div class="welcome" id="welcome">
-                        <h2>Oakbrook Collections Brain</h2>
-                        <p>AI agent that combines Customer 360 data, propensity-to-pay models,<br>
-                        and best-time-to-contact predictions to optimise collection strategies.</p>
+                        <h2>Agent Chat</h2>
+                        <p>Ask the Collections Brain ad-hoc questions about customers, strategies, or compliance.</p>
                         <p style="font-size: 12px; color: #a0aec0;">
                             Feature Tables &bull; MLflow 3.0 Model Serving &bull; Structured Streaming &bull; MCP Server (Scorecard)<br>
                             Multi-Agent Supervisor &bull; RAG Comms &bull; Open Banking &bull; FCA Vulnerability Engine
@@ -290,7 +946,7 @@
             </div>
         </div>
 
-        <!-- TAB 2: Architecture -->
+        <!-- TAB 4: Architecture -->
         <div class="tab-panel" id="tab-arch">
             <div class="arch-content">
                 <h2>System Architecture</h2>
@@ -314,7 +970,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: How to Build This -->
+        <!-- TAB 5: How to Build This -->
         <div class="tab-panel" id="tab-build">
             <div class="arch-content">
                 <h2>How to Build This</h2>
@@ -605,24 +1261,44 @@
     </div>
 
     <script>
+        // ========================
+        // STATE
+        // ========================
         let chatMessages = [];
         let isLoading = false;
         const sessionId = 'session-' + Date.now();
+        let selectedCustomerId = null;
+        let selectedCustomerName = null;
+        let selectedCustomerData = null;
+        let mlScoresData = null; // stored for strategy dependency
+        let approvalQueue = []; // local state for approvals
+        let approvalIdCounter = 1;
+        let lastCommsData = null; // stored for submit-to-approval
 
+        // ========================
+        // TAB SWITCHING
+        // ========================
         function switchTab(tab) {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
             document.getElementById('tab-' + tab).classList.add('active');
             event.currentTarget.classList.add('active');
+
+            if (tab === 'approvals') {
+                loadApprovals();
+            }
         }
 
+        // ========================
+        // CUSTOMER LIST
+        // ========================
         async function loadCustomers() {
             try {
                 const res = await fetch('/api/customers');
                 const customers = await res.json();
                 const list = document.getElementById('customerList');
                 list.innerHTML = customers.map(c => `
-                    <div class="customer-card" onclick="selectCustomer('${c.customer_id}', '${c.name}')">
+                    <div class="customer-card" data-id="${c.customer_id}" onclick="selectCustomer('${c.customer_id}', '${c.name}', this)">
                         <div class="name">${c.name}</div>
                         <div class="product">${c.customer_id} &bull; ${c.product}</div>
                         <div class="meta">
@@ -637,16 +1313,487 @@
             }
         }
 
-        function selectCustomer(id, name) {
+        function selectCustomer(id, name, el) {
             document.querySelectorAll('.customer-card').forEach(c => c.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
-            switchTab('chat');
+            if (el) el.classList.add('selected');
+
+            selectedCustomerId = id;
+            selectedCustomerName = name;
+            mlScoresData = null;
+            lastCommsData = null;
+
+            // Show workbench
+            document.getElementById('workbenchEmpty').style.display = 'none';
+            document.getElementById('workbenchActive').style.display = 'block';
+            document.getElementById('wb-customer-name').textContent = name;
+            document.getElementById('wb-customer-meta').textContent = id;
+
+            // Switch to workbench tab
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-workbench').classList.add('active');
             document.querySelectorAll('.header-tab')[0].classList.add('active');
-            document.getElementById('input').value = `Analyse customer ${id} (${name}) — run all models and recommend a collection strategy.`;
-            document.getElementById('input').focus();
+
+            // Reset all sections
+            resetSections();
+
+            // Auto-load profile
+            loadProfile(id);
         }
 
+        function resetSections() {
+            // Close all except profile
+            ['payments', 'ml', 'openbanking', 'vulnerability', 'strategy', 'comms'].forEach(s => {
+                document.getElementById('section-' + s).classList.remove('open');
+            });
+            document.getElementById('section-profile').classList.add('open');
+
+            // Reset content
+            document.getElementById('content-profile').innerHTML = '<div class="spinner">Loading customer profile...</div>';
+            document.getElementById('content-payments').innerHTML = '<div class="spinner">Loading payment history...</div>';
+            document.getElementById('content-ml').innerHTML = '<p style="color:var(--text-light);font-size:13px;">Click "Run Models" to score propensity-to-pay and best-time-to-contact.</p>';
+            document.getElementById('content-openbanking').innerHTML = '<div class="spinner">Loading Open Banking data...</div>';
+            document.getElementById('content-vulnerability').innerHTML = '<p style="color:var(--text-light);font-size:13px;">Click "Run Assessment" to evaluate vulnerability indicators.</p>';
+            document.getElementById('content-strategy').innerHTML = '<p style="color:var(--text-light);font-size:13px;">Run ML Models first (step 3), then generate strategy.</p>';
+            document.getElementById('content-comms').innerHTML = '<p style="color:var(--text-light);font-size:13px;">Click "Generate Message" to draft a personalised communication.</p>';
+
+            // Mark sections as not loaded
+            ['payments', 'openbanking'].forEach(s => {
+                document.getElementById('section-' + s).dataset.loaded = 'false';
+            });
+        }
+
+        // ========================
+        // ACCORDION
+        // ========================
+        function toggleAccordion(section) {
+            const el = document.getElementById('section-' + section);
+            const isOpen = el.classList.contains('open');
+
+            if (!isOpen) {
+                el.classList.add('open');
+                // Auto-load data for expand-to-load sections
+                if (section === 'payments' && el.dataset.loaded !== 'true') {
+                    loadPayments(selectedCustomerId);
+                    el.dataset.loaded = 'true';
+                }
+                if (section === 'openbanking' && el.dataset.loaded !== 'true') {
+                    loadOpenBanking(selectedCustomerId);
+                    el.dataset.loaded = 'true';
+                }
+            } else {
+                el.classList.remove('open');
+            }
+        }
+
+        // ========================
+        // SECTION LOADERS
+        // ========================
+        async function loadProfile(id) {
+            const el = document.getElementById('content-profile');
+            try {
+                const res = await fetch(`/api/customers/${id}`);
+                const data = await res.json();
+                selectedCustomerData = data;
+
+                // Update header meta
+                document.getElementById('wb-customer-meta').textContent = `${id} | ${data.product || ''} | ${data.risk_segment || ''} Risk | ${data.days_past_due || 0}d overdue`;
+
+                const fields = [
+                    { label: 'Customer ID', value: data.customer_id },
+                    { label: 'Product', value: data.product },
+                    { label: 'Outstanding Balance', value: `\u00A3${(data.outstanding_balance || 0).toLocaleString()}`, cls: 'danger' },
+                    { label: 'Days Past Due', value: data.days_past_due, cls: data.days_past_due > 60 ? 'danger' : data.days_past_due > 30 ? 'warning' : 'accent' },
+                    { label: 'Risk Segment', value: data.risk_segment },
+                    { label: 'Employment', value: data.employment_status },
+                    { label: 'Monthly Income', value: data.monthly_income ? `\u00A3${data.monthly_income.toLocaleString()}` : 'N/A' },
+                    { label: 'Contact Preference', value: data.preferred_contact || 'WhatsApp' },
+                    { label: 'Last Contact', value: data.last_contact_date || 'N/A' },
+                    { label: 'Previous Arrangements', value: data.previous_arrangements || '0' },
+                ];
+
+                el.innerHTML = `<div class="data-grid">${fields.map(f =>
+                    `<div class="data-card"><div class="label">${f.label}</div><div class="value ${f.cls || ''}">${f.value || 'N/A'}</div></div>`
+                ).join('')}</div>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to load profile: ${e.message}</p>`;
+            }
+        }
+
+        async function loadPayments(id) {
+            const el = document.getElementById('content-payments');
+            el.innerHTML = '<div class="spinner">Loading payment history...</div>';
+            try {
+                const res = await fetch(`/api/customers/${id}/payments`);
+                const data = await res.json();
+                const payments = data.payments || data;
+
+                if (!payments || payments.length === 0) {
+                    el.innerHTML = '<p style="color:var(--text-light);">No payment records found.</p>';
+                    return;
+                }
+
+                el.innerHTML = `
+                    <table class="data-table">
+                        <thead><tr><th>Date</th><th>Amount</th><th>Type</th><th>Status</th><th>Method</th></tr></thead>
+                        <tbody>${payments.map(p => `
+                            <tr>
+                                <td>${p.date || p.payment_date || ''}</td>
+                                <td>\u00A3${(p.amount || 0).toLocaleString()}</td>
+                                <td>${p.type || p.payment_type || ''}</td>
+                                <td><span class="status-badge ${p.status === 'completed' || p.status === 'successful' ? 'status-approved' : p.status === 'failed' || p.status === 'missed' ? 'status-rejected' : 'status-pending'}">${p.status || ''}</span></td>
+                                <td>${p.method || p.payment_method || ''}</td>
+                            </tr>
+                        `).join('')}</tbody>
+                    </table>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to load payments: ${e.message}</p>`;
+            }
+        }
+
+        async function runMLModels() {
+            const el = document.getElementById('content-ml');
+            const section = document.getElementById('section-ml');
+            section.classList.add('open');
+            el.innerHTML = '<div class="spinner">Running propensity-to-pay and best-time-to-contact models...</div>';
+
+            try {
+                const [ptpRes, btcRes] = await Promise.all([
+                    fetch(`/api/customers/${selectedCustomerId}/ptp`),
+                    fetch(`/api/customers/${selectedCustomerId}/btc`)
+                ]);
+                const ptp = await ptpRes.json();
+                const btc = await btcRes.json();
+
+                mlScoresData = { ptp, btc };
+
+                const ptpScore = ptp.propensity_to_pay_score || ptp.propensity_score || ptp.score || 0;
+                const ptpBand = ptp.band || ptp.propensity_band || 'Unknown';
+                const ptpScoreClass = ptpScore >= 0.6 ? 'score-high' : ptpScore >= 0.3 ? 'score-medium' : 'score-low';
+
+                const btcDay = btc.best_day || btc.recommended_day || 'N/A';
+                const btcTime = btc.best_time || btc.recommended_time || 'N/A';
+                const btcChannel = btc.preferred_channel || btc.best_channel || btc.recommended_channel || 'N/A';
+
+                el.innerHTML = `
+                    <div class="score-row">
+                        <div class="score-card">
+                            <div class="score-label">Propensity to Pay</div>
+                            <div class="score-value ${ptpScoreClass}">${(ptpScore * 100).toFixed(0)}%</div>
+                            <div class="score-detail">Band: <strong>${ptpBand}</strong></div>
+                            <div style="margin-top:4px;"><span class="source-badge badge-ml" style="font-size:10px;">ptp-v3.2.1</span></div>
+                        </div>
+                        <div class="score-card">
+                            <div class="score-label">Best Time to Contact</div>
+                            <div class="score-value" style="font-size:24px;">${btcDay}<br>${btcTime}</div>
+                            <div class="score-detail">Channel: <strong>${btcChannel}</strong></div>
+                            <div style="margin-top:4px;"><span class="source-badge badge-ml" style="font-size:10px;">btc-v2.1.0</span></div>
+                        </div>
+                    </div>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to run ML models: ${e.message}</p>`;
+            }
+        }
+
+        async function loadOpenBanking(id) {
+            const el = document.getElementById('content-openbanking');
+            el.innerHTML = '<div class="spinner">Loading Open Banking data...</div>';
+            try {
+                const res = await fetch(`/api/customers/${id}/open-banking`);
+                const data = await res.json();
+
+                if (data.consent_status === 'not_consented' || data.error || !data.monthly_income) {
+                    el.innerHTML = `
+                        <div style="text-align:center;padding:20px;color:var(--text-light);">
+                            <div style="font-size:32px;margin-bottom:8px;">&#x1F6AB;</div>
+                            <strong>Not Consented</strong>
+                            <p style="font-size:13px;margin-top:4px;">Customer has not provided Open Banking consent. Affordability data unavailable.</p>
+                        </div>`;
+                    return;
+                }
+
+                const fields = [
+                    { label: 'Monthly Income', value: `\u00A3${(data.monthly_income || 0).toLocaleString()}`, cls: 'accent' },
+                    { label: 'Monthly Expenses', value: `\u00A3${(data.monthly_expenses || 0).toLocaleString()}` },
+                    { label: 'Disposable Income', value: `\u00A3${(data.disposable_income || 0).toLocaleString()}`, cls: data.disposable_income > 200 ? 'accent' : 'warning' },
+                    { label: 'Gambling Detected', value: data.gambling_detected ? 'Yes' : 'No', cls: data.gambling_detected ? 'danger' : 'accent' },
+                    { label: 'ClearScore Band', value: data.clearscore_band || data.credit_score_band || 'N/A' },
+                    { label: 'Data Freshness', value: data.data_date || data.last_updated || 'N/A' },
+                ];
+
+                el.innerHTML = `<div class="data-grid">${fields.map(f =>
+                    `<div class="data-card"><div class="label">${f.label}</div><div class="value ${f.cls || ''}">${f.value}</div></div>`
+                ).join('')}</div>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to load Open Banking data: ${e.message}</p>`;
+            }
+        }
+
+        async function runVulnerability() {
+            const el = document.getElementById('content-vulnerability');
+            const section = document.getElementById('section-vulnerability');
+            section.classList.add('open');
+            el.innerHTML = '<div class="spinner">Running FCA vulnerability assessment...</div>';
+
+            try {
+                const res = await fetch(`/api/customers/${selectedCustomerId}/vulnerability`);
+                const data = await res.json();
+
+                const level = (data.risk_level || data.vulnerability_level || 'unknown').toLowerCase();
+                const levelClass = level === 'high' ? 'vuln-high' : level === 'medium' ? 'vuln-medium' : 'vuln-low';
+                const indicators = data.indicators || data.vulnerability_indicators || [];
+                const approach = data.recommended_approach || data.approach || 'Standard collections process';
+
+                el.innerHTML = `
+                    <div class="vuln-card">
+                        <div class="vuln-level ${levelClass}">
+                            ${level.toUpperCase()}
+                            <div style="font-size:12px;font-weight:400;margin-top:4px;">Risk Level</div>
+                        </div>
+                        <div class="vuln-details">
+                            <strong style="font-size:13px;">Indicators:</strong>
+                            <ul>${indicators.map(i => `<li>${i}</li>`).join('') || '<li>No indicators detected</li>'}</ul>
+                            <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;font-size:13px;">
+                                <strong>Recommended Approach:</strong> ${approach}
+                            </div>
+                        </div>
+                    </div>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to run vulnerability assessment: ${e.message}</p>`;
+            }
+        }
+
+        async function runStrategy() {
+            if (!mlScoresData) {
+                alert('Please run ML Models (step 3) first before generating a strategy.');
+                return;
+            }
+
+            const el = document.getElementById('content-strategy');
+            const section = document.getElementById('section-strategy');
+            section.classList.add('open');
+            el.innerHTML = '<div class="spinner">Generating collection strategy via MCP Server...</div>';
+
+            try {
+                const band = mlScoresData.ptp.propensity_band || mlScoresData.ptp.band || 'Medium';
+                const res = await fetch(`/api/customers/${selectedCustomerId}/scorecard?propensity_band=${encodeURIComponent(band)}`);
+                const data = await res.json();
+
+                const segment = data.segment || data.collection_segment || 'N/A';
+                const strategy = data.strategy || data.recommended_strategy || 'N/A';
+                const actions = data.recommended_actions || data.actions || [];
+                const contactPlan = data.contact_plan || data.contact_frequency || 'N/A';
+                const paymentPlan = data.payment_plan || data.suggested_payment_plan || 'N/A';
+                const escalation = data.escalation_triggers || data.escalation || [];
+
+                el.innerHTML = `
+                    <div class="strategy-grid">
+                        <div class="strategy-box">
+                            <h4>Scorecard Segment</h4>
+                            <p style="font-size:20px;font-weight:700;color:var(--primary);">${segment}</p>
+                            <p style="margin-top:8px;">${strategy}</p>
+                        </div>
+                        <div class="strategy-box">
+                            <h4>Contact Plan</h4>
+                            <p>${typeof contactPlan === 'object' ? JSON.stringify(contactPlan, null, 2) : contactPlan}</p>
+                        </div>
+                        <div class="strategy-box">
+                            <h4>Recommended Actions</h4>
+                            <ul>${(Array.isArray(actions) ? actions : [actions]).map(a => `<li>${a}</li>`).join('')}</ul>
+                        </div>
+                        <div class="strategy-box">
+                            <h4>Payment Plan</h4>
+                            <p>${typeof paymentPlan === 'object' ? JSON.stringify(paymentPlan, null, 2) : paymentPlan}</p>
+                        </div>
+                    </div>
+                    ${escalation.length ? `<div style="margin-top:12px;padding:12px;background:#fff5f5;border:1px solid #feb2b2;border-radius:8px;font-size:13px;"><strong>Escalation Triggers:</strong> ${escalation.join(', ')}</div>` : ''}`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to generate strategy: ${e.message}</p>`;
+            }
+        }
+
+        async function runComms() {
+            const el = document.getElementById('content-comms');
+            const section = document.getElementById('section-comms');
+            section.classList.add('open');
+            el.innerHTML = '<div class="spinner">Generating personalised communication via RAG...</div>';
+
+            try {
+                const res = await fetch(`/api/customers/${selectedCustomerId}/communication`);
+                const data = await res.json();
+                lastCommsData = data;
+
+                const message = data.message || data.content || data.communication || 'No message generated.';
+                const tone = (data.tone || 'Friendly').toLowerCase();
+                const channel = data.channel || 'WhatsApp';
+                const toneClass = tone === 'sensitive' ? 'tone-sensitive' : tone === 'empathetic' ? 'tone-empathetic' : tone === 'formal' ? 'tone-formal' : 'tone-friendly';
+
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+                el.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                        <span class="tone-badge ${toneClass}">${data.tone || 'Friendly'}</span>
+                        <span class="source-badge badge-data">${channel}</span>
+                    </div>
+                    <div class="phone-mockup">
+                        <div class="phone-header">
+                            <div class="avatar">O</div>
+                            <div>
+                                <div>Oakbrook Finance</div>
+                                <div style="font-size:11px;font-weight:400;opacity:0.8;">online</div>
+                            </div>
+                        </div>
+                        <div class="phone-body">
+                            <div class="wa-bubble">
+                                ${escapeHtml(message)}
+                                <div class="wa-time">${timeStr} &#x2713;&#x2713;</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align:center;">
+                        <button class="submit-btn" onclick="submitForApproval()" id="btn-submit-approval">Submit for Approval</button>
+                    </div>`;
+            } catch (e) {
+                el.innerHTML = `<p style="color:var(--danger);">Failed to generate communication: ${e.message}</p>`;
+            }
+        }
+
+        // ========================
+        // APPROVAL QUEUE
+        // ========================
+        async function submitForApproval() {
+            const btn = document.getElementById('btn-submit-approval');
+            btn.disabled = true;
+            btn.textContent = 'Submitting...';
+
+            try {
+                const res = await fetch('/api/approvals', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: selectedCustomerId,
+                        customer_name: selectedCustomerName,
+                        channel: lastCommsData?.channel || 'WhatsApp',
+                        tone: lastCommsData?.tone || 'Friendly',
+                        message: lastCommsData?.message || lastCommsData?.content || lastCommsData?.communication || ''
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Also keep local copy
+                    approvalQueue.push({
+                        id: data.id || approvalIdCounter++,
+                        customer_id: selectedCustomerId,
+                        customer_name: selectedCustomerName,
+                        channel: lastCommsData?.channel || 'WhatsApp',
+                        tone: lastCommsData?.tone || 'Friendly',
+                        status: 'pending',
+                        submitted: new Date().toISOString()
+                    });
+                    btn.textContent = 'Submitted';
+                    btn.style.background = 'var(--accent)';
+                } else {
+                    // If API doesn't exist yet, store locally
+                    approvalQueue.push({
+                        id: approvalIdCounter++,
+                        customer_id: selectedCustomerId,
+                        customer_name: selectedCustomerName,
+                        channel: lastCommsData?.channel || 'WhatsApp',
+                        tone: lastCommsData?.tone || 'Friendly',
+                        message: lastCommsData?.message || lastCommsData?.content || lastCommsData?.communication || '',
+                        status: 'pending',
+                        submitted: new Date().toISOString()
+                    });
+                    btn.textContent = 'Submitted';
+                    btn.style.background = 'var(--accent)';
+                }
+            } catch (e) {
+                // Fallback: store locally
+                approvalQueue.push({
+                    id: approvalIdCounter++,
+                    customer_id: selectedCustomerId,
+                    customer_name: selectedCustomerName,
+                    channel: lastCommsData?.channel || 'WhatsApp',
+                    tone: lastCommsData?.tone || 'Friendly',
+                    message: lastCommsData?.message || lastCommsData?.content || lastCommsData?.communication || '',
+                    status: 'pending',
+                    submitted: new Date().toISOString()
+                });
+                btn.textContent = 'Submitted (local)';
+                btn.style.background = 'var(--accent)';
+            }
+        }
+
+        async function loadApprovals() {
+            const body = document.getElementById('approvalBody');
+
+            // Try to fetch from API first
+            try {
+                const res = await fetch('/api/approvals');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        renderApprovalTable(data);
+                        return;
+                    }
+                }
+            } catch (e) { /* fall through to local */ }
+
+            // Use local queue
+            if (approvalQueue.length === 0) {
+                body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-light);padding:40px;">No communications submitted yet. Generate a message in the Workbench and submit for approval.</td></tr>';
+                return;
+            }
+            renderApprovalTable(approvalQueue);
+        }
+
+        function renderApprovalTable(items) {
+            const body = document.getElementById('approvalBody');
+            body.innerHTML = items.map(item => {
+                const statusClass = item.status === 'approved' ? 'status-approved' : item.status === 'rejected' ? 'status-rejected' : 'status-pending';
+                const actions = item.status === 'pending'
+                    ? `<button class="approve-btn" onclick="approveItem(${item.id})">Approve</button><button class="reject-btn" onclick="rejectItem(${item.id})">Reject</button>`
+                    : item.status === 'approved'
+                    ? '<a href="#" style="font-size:12px;color:var(--accent);">Sent to WhatsApp</a>'
+                    : '<span style="font-size:12px;color:var(--text-light);">Rejected</span>';
+
+                return `<tr>
+                    <td>${item.id}</td>
+                    <td>${item.customer_name || item.customer_id}</td>
+                    <td>${item.channel || 'WhatsApp'}</td>
+                    <td>${item.tone || 'Friendly'}</td>
+                    <td><span class="status-badge ${statusClass}">${item.status}</span></td>
+                    <td>${new Date(item.submitted || item.created_at || Date.now()).toLocaleString()}</td>
+                    <td>${actions}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function approveItem(id) {
+            try {
+                await fetch(`/api/approvals/${id}/approve`, { method: 'POST' });
+            } catch (e) { /* local fallback */ }
+
+            const item = approvalQueue.find(a => a.id === id);
+            if (item) item.status = 'approved';
+            loadApprovals();
+        }
+
+        async function rejectItem(id) {
+            try {
+                await fetch(`/api/approvals/${id}/reject`, { method: 'POST' });
+            } catch (e) { /* local fallback */ }
+
+            const item = approvalQueue.find(a => a.id === id);
+            if (item) item.status = 'rejected';
+            loadApprovals();
+        }
+
+        // ========================
+        // CHAT (same as original)
+        // ========================
         function sendSuggestion(el) {
             document.getElementById('input').value = el.textContent;
             sendMessage();
@@ -682,7 +1829,6 @@
                     const data = await res.json();
                     appendMessage('assistant', `Error (${res.status}): ${data.detail || JSON.stringify(data)}`);
                 } else {
-                    // Streaming response
                     const reader = res.body.getReader();
                     const decoder = new TextDecoder();
                     let fullResponse = '';
@@ -728,7 +1874,6 @@
             if (typeof marked !== 'undefined' && marked.parse) {
                 return marked.parse(text, { breaks: true, gfm: true });
             }
-            // Fallback if marked hasn't loaded
             let html = escapeHtml(text);
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
             html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
@@ -814,7 +1959,6 @@
         }
 
         function finalizeStreamMessage(div, fullResponse, trace) {
-            // Remove tool status chips and add trace panel
             div.querySelector('.stream-tools').innerHTML = '';
             if (trace && trace.length > 0) {
                 const traceId = 'trace-' + Date.now();

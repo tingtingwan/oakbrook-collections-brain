@@ -5,102 +5,196 @@ FastAPI backend for the Oakbrook AI Collections Agent demo.
 import os
 import json
 import traceback
+from datetime import datetime
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from pathlib import Path
 
 from backend.agent import run_agent, run_agent_stream
-from backend.data import get_all_customers
+from backend.data import (
+    get_customer, get_all_customers, get_payment_history,
+    score_propensity_to_pay, score_best_time_to_contact,
+    get_open_banking_data, get_scorecard_segment,
+    assess_vulnerability, generate_communication,
+)
 from backend.memory import ConversationMemory
 
 app = FastAPI(title="Oakbrook Collections Brain")
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
-# Conversation memory backed by Lakebase (PostgreSQL)
+# Conversation + approval memory
 memory = ConversationMemory()
 
+# In-memory approval queue (Lakebase in production)
+approval_queue: list[dict] = []
+
+
+# ---------------------------------------------------------------------------
+# Individual tool endpoints (for step-by-step workbench UI)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/customers")
+async def list_customers():
+    return get_all_customers()
+
+
+@app.get("/api/customers/{customer_id}")
+async def get_customer_detail(customer_id: str):
+    c = get_customer(customer_id)
+    if not c:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return c
+
+
+@app.get("/api/customers/{customer_id}/payments")
+async def get_customer_payments(customer_id: str):
+    result = get_payment_history(customer_id)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "No payment history"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/ptp")
+async def get_customer_ptp(customer_id: str):
+    result = score_propensity_to_pay(customer_id)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/btc")
+async def get_customer_btc(customer_id: str):
+    result = score_best_time_to_contact(customer_id)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/open-banking")
+async def get_customer_ob(customer_id: str):
+    result = get_open_banking_data(customer_id)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "No Open Banking data — customer has not consented"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/vulnerability")
+async def get_customer_vulnerability(customer_id: str):
+    result = assess_vulnerability(customer_id)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/scorecard")
+async def get_customer_scorecard(customer_id: str, propensity_band: str = "Medium"):
+    result = get_scorecard_segment(customer_id, propensity_band)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return result
+
+
+@app.get("/api/customers/{customer_id}/communication")
+async def get_customer_comms(customer_id: str, tone: str = "auto"):
+    result = generate_communication(customer_id, tone)
+    if not result:
+        return JSONResponse(status_code=404, content={"error": "Customer not found"})
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Approval queue (Lakebase layer — human-in-the-loop)
+# ---------------------------------------------------------------------------
+
+class ApprovalRequest(BaseModel):
+    customer_id: str
+    customer_name: str
+    channel: str
+    tone: str
+    message: str
+    strategy_summary: str = ""
+
+
+@app.post("/api/approvals")
+async def submit_for_approval(req: ApprovalRequest):
+    """Submit a generated communication to the approval queue (Lakebase)."""
+    entry = {
+        "id": f"APR-{len(approval_queue)+1:04d}",
+        "customer_id": req.customer_id,
+        "customer_name": req.customer_name,
+        "channel": req.channel,
+        "tone": req.tone,
+        "message": req.message,
+        "strategy_summary": req.strategy_summary,
+        "status": "Pending",
+        "submitted_at": datetime.now().isoformat(),
+        "submitted_by": "Collections Brain Agent",
+        "reviewed_by": None,
+        "reviewed_at": None,
+    }
+    approval_queue.append(entry)
+    # Also save to memory (would be Lakebase in prod)
+    memory.save_message("approvals", "system", json.dumps(entry))
+    return entry
+
+
+@app.get("/api/approvals")
+async def list_approvals():
+    """List all pending and processed approvals."""
+    return approval_queue
+
+
+@app.post("/api/approvals/{approval_id}/approve")
+async def approve_comms(approval_id: str):
+    """Approve a communication — marks as approved, ready to send."""
+    for entry in approval_queue:
+        if entry["id"] == approval_id:
+            entry["status"] = "Approved"
+            entry["reviewed_by"] = "Manager"
+            entry["reviewed_at"] = datetime.now().isoformat()
+            return entry
+    return JSONResponse(status_code=404, content={"error": "Approval not found"})
+
+
+@app.post("/api/approvals/{approval_id}/reject")
+async def reject_comms(approval_id: str):
+    """Reject a communication."""
+    for entry in approval_queue:
+        if entry["id"] == approval_id:
+            entry["status"] = "Rejected"
+            entry["reviewed_by"] = "Manager"
+            entry["reviewed_at"] = datetime.now().isoformat()
+            return entry
+    return JSONResponse(status_code=404, content={"error": "Approval not found"})
+
+
+# ---------------------------------------------------------------------------
+# Chat endpoints (for ad-hoc questions)
+# ---------------------------------------------------------------------------
 
 class ChatRequest(BaseModel):
     messages: list[dict]
     session_id: str = "default"
 
 
-class ChatResponse(BaseModel):
-    response: str
-    trace: list[dict]
-
-
-@app.get("/api/customers")
-async def list_customers():
-    """Return all customers for the portfolio overview."""
-    return get_all_customers()
-
-
-@app.get("/api/debug")
-async def debug():
-    """Debug endpoint to check environment."""
-    host = os.environ.get("DATABRICKS_HOST", "NOT SET")
-    token = os.environ.get("DATABRICKS_TOKEN", "NOT SET")
-    sdk_token = "NOT AVAILABLE"
-    sdk_error = None
-    try:
-        from databricks.sdk import WorkspaceClient
-        clean_host = host.replace("https://", "").replace("http://", "") if host != "NOT SET" else ""
-        w = WorkspaceClient(host=f"https://{clean_host}") if clean_host else WorkspaceClient()
-        t = ""
-        if hasattr(w.config, 'token') and w.config.token:
-            t = w.config.token
-        else:
-            auth_result = w.config.authenticate()
-            if callable(auth_result):
-                headers = auth_result()
-            elif isinstance(auth_result, dict):
-                headers = auth_result
-            else:
-                headers = {}
-            auth_header = headers.get("Authorization", "")
-            t = auth_header.replace("Bearer ", "") if auth_header else ""
-        sdk_token = f"{t[:20]}..." if t else "EMPTY"
-    except Exception as e:
-        sdk_error = str(e)
-    return {
-        "DATABRICKS_HOST": host,
-        "DATABRICKS_TOKEN": f"{token[:20]}..." if token and token != "NOT SET" else "NOT SET",
-        "SDK_TOKEN": sdk_token,
-        "SDK_ERROR": sdk_error,
-        "LAKEBASE_STATUS": memory.status(),
-    }
-
-
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """Send a message to the AI Collections Agent (non-streaming)."""
     try:
-        # Load conversation history from Lakebase
         history = memory.get_history(request.session_id)
         all_messages = history + request.messages
-
         result = await run_agent(all_messages)
-
-        # Save to Lakebase memory
         for msg in request.messages:
             memory.save_message(request.session_id, msg["role"], msg["content"])
         memory.save_message(request.session_id, "assistant", result["response"])
-
         return result
     except Exception as e:
-        tb = traceback.format_exc()
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e), "traceback": tb},
-        )
+        return JSONResponse(status_code=500, content={"detail": str(e), "traceback": traceback.format_exc()})
 
 
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
-    """Send a message to the AI Collections Agent with streaming response."""
     try:
         history = memory.get_history(request.session_id)
         all_messages = history + request.messages
@@ -118,8 +212,6 @@ async def chat_stream(request: ChatRequest):
                 elif event["type"] == "done":
                     full_response = event.get("data", full_response)
                     yield f"data: {json.dumps({'type': 'done', 'data': {'trace': trace}})}\n\n"
-
-            # Save to Lakebase memory
             for msg in request.messages:
                 memory.save_message(request.session_id, msg["role"], msg["content"])
             if full_response:
@@ -127,35 +219,28 @@ async def chat_stream(request: ChatRequest):
 
         return StreamingResponse(event_generator(), media_type="text/event-stream")
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": str(e)},
-        )
+        return JSONResponse(status_code=500, content={"detail": str(e)})
 
 
-@app.get("/api/sessions/{session_id}/history")
-async def get_session_history(session_id: str):
-    """Retrieve conversation history from Lakebase."""
-    return memory.get_history(session_id)
-
-
-@app.delete("/api/sessions/{session_id}")
-async def clear_session(session_id: str):
-    """Clear conversation history for a session."""
-    memory.clear_history(session_id)
-    return {"status": "cleared"}
-
+# ---------------------------------------------------------------------------
+# Static assets
+# ---------------------------------------------------------------------------
 
 @app.get("/api/architecture")
 async def serve_architecture():
-    """Serve the architecture diagram."""
     img_path = Path(__file__).parent.parent / "docs" / "oakbrook_architecture.png"
     if img_path.exists():
         return FileResponse(img_path, media_type="image/png")
     return JSONResponse(status_code=404, content={"error": "Architecture diagram not found"})
 
 
+@app.get("/api/debug")
+async def debug():
+    host = os.environ.get("DATABRICKS_HOST", "NOT SET")
+    token = os.environ.get("DATABRICKS_TOKEN", "NOT SET")
+    return {"DATABRICKS_HOST": host, "DATABRICKS_TOKEN": "SET" if token != "NOT SET" else "NOT SET", "LAKEBASE_STATUS": memory.status(), "APPROVALS_COUNT": len(approval_queue)}
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
-    """Serve the main UI."""
     return FileResponse(FRONTEND_DIR / "index.html")
