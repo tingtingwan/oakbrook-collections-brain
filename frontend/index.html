@@ -1559,7 +1559,12 @@
                         </div>
                         <div class="vuln-details">
                             <strong style="font-size:13px;">Indicators:</strong>
-                            <ul>${indicators.map(i => `<li>${i}</li>`).join('') || '<li>No indicators detected</li>'}</ul>
+                            <ul>${indicators.map(i => {
+                                if (typeof i === 'string') return `<li>${i}</li>`;
+                                const sev = i.severity || '';
+                                const sevColor = sev === 'High' ? '#e53e3e' : sev === 'Medium' ? '#dd6b20' : '#718096';
+                                return `<li><span style="color:${sevColor};font-weight:600;">[${i.type || ''}]</span> ${i.detail || JSON.stringify(i)} <span style="font-size:11px;color:${sevColor};">(${sev})</span></li>`;
+                            }).join('') || '<li>No indicators detected</li>'}</ul>
                             <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;font-size:13px;">
                                 <strong>Recommended Approach:</strong> ${approach}
                             </div>
