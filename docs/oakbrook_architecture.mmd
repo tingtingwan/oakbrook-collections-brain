@@ -14,112 +14,95 @@
 }}%%
 flowchart TB
 
-    subgraph SRC["CURRENT DATA SOURCES"]
-        direction LR
-        ICE["IceNet<br/><i>SQL Server · 3x daily</i><br/><i>→ Oracle end 2026</i>"]
-        O6K["O6K Events<br/><i>GCS/PubSub · hourly</i>"]
-        ZEN["Zendesk<br/><i>Fivetran · hourly</i>"]
-        MAIL["Mailchimp<br/><i>Fivetran · hourly</i>"]
-        FTP["Collections FTP<br/><i>CSV/XML · daily</i>"]
-        CS["ClearScore<br/><i>Open Banking API</i>"]
+    subgraph L1["USER INTERFACE — Databricks App"]
+        APP["Collections Workbench<br/><i>FastAPI + SSE</i>"]
     end
 
-    subgraph DBX["DATABRICKS PLATFORM (EXISTING)"]
+    subgraph L2["LLM — Claude Sonnet 4.6 via FMAPI"]
         direction LR
-        subgraph MED["Medallion Architecture"]
-            direction LR
-            BRZ["Bronze<br/><i>Raw</i>"]
-            SLV["Silver<br/><i>Cleansed<br/>every 2-4 hrs</i>"]
-            GLD["Gold<br/><i>Curated<br/>up to 3x daily</i>"]
-        end
+        AGENT["Agent Chat<br/><i>Tool-calling orchestration</i>"]
+        COMMS["Comms Generation<br/><i>LLM-personalised messages</i>"]
     end
 
-    subgraph NEW["NEW: AI COLLECTIONS LAYER"]
-        direction TB
-        subgraph FT["Feature Tables (Unity Catalog)"]
-            direction LR
-            C360["Customer 360"]
-            PAYH["Payment History"]
-            OBD["Open Banking"]
-        end
-        subgraph AGENT["AI Agent — Claude Sonnet via FMAPI"]
-            direction LR
-            PTP["Propensity-to-Pay<br/><i>MLflow Model Serving</i>"]
-            BTC["Best-Time-to-Contact<br/><i>MLflow Model Serving</i>"]
-            SC["Scorecard<br/><i>MCP Server</i>"]
-            VUL["Vulnerability<br/><i>FCA Engine</i>"]
-            RAG["Comms<br/><i>RAG · Vector Search</i>"]
-        end
+    subgraph L3["ML MODELS — MLflow Model Serving"]
+        direction LR
+        PTP["oakbrook-ptp-model<br/><i>Propensity-to-Pay<br/>Serving Endpoint</i>"]
+        BTC["oakbrook-btc-model<br/><i>Best-Time-to-Contact<br/>Serving Endpoint</i>"]
+    end
+
+    subgraph L4["DATA — UC Feature Tables"]
+        direction LR
+        C360["customer_360<br/><i>100 customers<br/>Feature Table + PK</i>"]
+        PAY["payment_history<br/><i>~400 records<br/>SQL Connector</i>"]
+        OB["open_banking_data<br/><i>~50 records<br/>SQL Connector</i>"]
+    end
+
+    subgraph L5["BUSINESS RULES — Local Logic"]
+        direction LR
+        SC["Scorecard<br/><i>6 segments<br/>Local rules</i>"]
+        VUL["Vulnerability<br/><i>FCA checks<br/>Local rules</i>"]
+    end
+
+    subgraph L6["GOVERNANCE — Unity Catalog"]
+        direction LR
         APQ["Approval Queue<br/><i>UC Delta Table</i>"]
+        MLF["MLflow 3.0<br/><i>Experiment tracking<br/>Model registry<br/>Agent tracing</i>"]
+        UC["Unity Catalog<br/><i>Governance<br/>Lineage</i>"]
     end
 
-    subgraph OBS["OBSERVABILITY"]
+    subgraph L7["OUTPUT CHANNELS"]
         direction LR
-        MLF["MLflow 3.0 Tracing<br/><i>Replaces Langfuse</i>"]
-        UC["Unity Catalog<br/><i>Governance · Lineage</i>"]
-    end
-
-    subgraph CON["CURRENT CONSUMERS"]
-        direction LR
-        EXCEL["Ops Excel<br/><i>Live query</i>"]
-        DEC["O6K Decision<br/>Engines<br/><i>Daily batch</i>"]
-        PBI["Power BI<br/><i>Daily refresh</i>"]
-        MCP["Claude / Cursor<br/><i>MCP (NEW)</i>"]
-    end
-
-    subgraph OUT["NEW: OUTPUT CHANNELS"]
-        direction LR
-        WA["WhatsApp<br/><i>Business API</i>"]
+        WA["WhatsApp"]
         SMS2["SMS"]
         EMAIL["Email"]
     end
 
-    ICE & O6K & ZEN & MAIL & FTP -->|"batch"| BRZ
-    BRZ --> SLV --> GLD
-    CS -->|"API"| OBD
-    GLD --> C360 & PAYH
-    GLD --> EXCEL & DEC & PBI & MCP
-    C360 & PAYH & OBD --> PTP & BTC & SC & VUL
-    VUL & SC --> RAG
-    RAG -->|"submit"| APQ
-    APQ -->|"approved"| WA & SMS2 & EMAIL
-    AGENT -.->|"trace"| MLF
-    FT -.-> UC
+    subgraph L8["DATA SOURCES — Lakeflow Connect"]
+        direction LR
+        ICE["IceNet / Oracle<br/><i>CDC</i>"]
+        ZEN["Zendesk<br/><i>Fivetran</i>"]
+        CS["ClearScore<br/><i>Open Banking</i>"]
+        FTP["SFTP / Mailchimp"]
+    end
 
-    style ICE fill:#dd6b20,stroke:#c05621,color:#fff
-    style O6K fill:#dd6b20,stroke:#c05621,color:#fff
-    style ZEN fill:#dd6b20,stroke:#c05621,color:#fff
-    style MAIL fill:#dd6b20,stroke:#c05621,color:#fff
-    style FTP fill:#dd6b20,stroke:#c05621,color:#fff
-    style CS fill:#dd6b20,stroke:#c05621,color:#fff
-    style BRZ fill:#4a5568,stroke:#2d3748,color:#fff
-    style SLV fill:#4a5568,stroke:#2d3748,color:#fff
-    style GLD fill:#4a5568,stroke:#2d3748,color:#fff
-    style C360 fill:#2b6cb0,stroke:#2a4365,color:#fff
-    style PAYH fill:#2b6cb0,stroke:#2a4365,color:#fff
-    style OBD fill:#2b6cb0,stroke:#2a4365,color:#fff
+    APP --> AGENT & COMMS
+    AGENT --> PTP & BTC
+    AGENT --> C360 & PAY & OB
+    AGENT --> SC & VUL
+    COMMS -->|"submit"| APQ
+    APQ -->|"approved"| WA & SMS2 & EMAIL
+    L3 -.->|"registered in"| MLF
+    C360 -.-> UC
+    APQ -.-> UC
+    ICE & ZEN & FTP --> C360
+    CS --> OB
+
+    style APP fill:#1a365d,stroke:#1a365d,color:#fff
+    style AGENT fill:#0d2b4e,stroke:#07192e,color:#fff
+    style COMMS fill:#0d2b4e,stroke:#07192e,color:#fff
     style PTP fill:#276749,stroke:#22543d,color:#fff
     style BTC fill:#276749,stroke:#22543d,color:#fff
-    style SC fill:#6b46c1,stroke:#553c9a,color:#fff
-    style VUL fill:#6b46c1,stroke:#553c9a,color:#fff
-    style RAG fill:#6b46c1,stroke:#553c9a,color:#fff
+    style C360 fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style PAY fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style OB fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style SC fill:#718096,stroke:#4a5568,color:#fff
+    style VUL fill:#718096,stroke:#4a5568,color:#fff
     style APQ fill:#c05621,stroke:#9c4221,color:#fff
     style MLF fill:#c05621,stroke:#9c4221,color:#fff
     style UC fill:#c05621,stroke:#9c4221,color:#fff
-    style EXCEL fill:#718096,stroke:#4a5568,color:#fff
-    style DEC fill:#718096,stroke:#4a5568,color:#fff
-    style PBI fill:#718096,stroke:#4a5568,color:#fff
-    style MCP fill:#1a365d,stroke:#0d2b4e,color:#fff
     style WA fill:#25d366,stroke:#128c7e,color:#fff
     style SMS2 fill:#3182ce,stroke:#2a4365,color:#fff
     style EMAIL fill:#718096,stroke:#4a5568,color:#fff
+    style ICE fill:#dd6b20,stroke:#c05621,color:#fff
+    style ZEN fill:#dd6b20,stroke:#c05621,color:#fff
+    style CS fill:#dd6b20,stroke:#c05621,color:#fff
+    style FTP fill:#dd6b20,stroke:#c05621,color:#fff
 
-    style SRC fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#431407
-    style DBX fill:#e2e8f0,stroke:#4a5568,stroke-width:2px,color:#2d3748
-    style MED fill:#edf2f7,stroke:#718096,stroke-width:1px,color:#2d3748
-    style NEW fill:#ebf8ff,stroke:#3182ce,stroke-width:2px,color:#1a365d
-    style FT fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e3a5f
-    style AGENT fill:#f0fdf4,stroke:#16a34a,stroke-width:1px,color:#14532d
-    style OBS fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#431407
-    style CON fill:#edf2f7,stroke:#718096,stroke-width:2px,color:#2d3748
-    style OUT fill:#f0fff4,stroke:#25d366,stroke-width:2px,color:#128c7e
+    style L1 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
+    style L2 fill:#e8edf7,stroke:#1a3a5c,stroke-width:2px,color:#1a3a5c
+    style L3 fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style L4 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
+    style L5 fill:#edf2f7,stroke:#718096,stroke-width:1px,color:#4a5568
+    style L6 fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#431407
+    style L7 fill:#f0fff4,stroke:#25d366,stroke-width:2px,color:#128c7e
+    style L8 fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#431407

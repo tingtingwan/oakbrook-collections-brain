@@ -579,8 +579,8 @@ def _vulnerability_approach(risk_level: str) -> str:
 
 def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
     """
-    Generate a personalised collection communication using RAG-retrieved templates.
-    In production: Vector store retrieval + LLM personalisation.
+    Generate a personalised collection communication via LLM (Claude Sonnet via FMAPI).
+    Uses RAG-retrieved template as context + customer profile for personalisation.
     """
     c = get_customer(customer_id)
     if not c:
@@ -593,6 +593,7 @@ def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
     name = str(c.get("name", "Customer")).split()[0]
     product = str(c.get("product", "Account"))
     balance = float(c.get("outstanding_balance", 0))
+    employment = str(c.get("employment_status", ""))
 
     # Auto-select tone based on customer profile
     if tone == "auto":
@@ -605,42 +606,100 @@ def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
         else:
             tone = "friendly"
 
-    # Select template based on tone and channel
-    if tone == "sensitive":
-        template_data = COMMS_TEMPLATES["vulnerability_sensitive"]
-    elif tone == "formal" and dpd > 90:
-        template_data = COMMS_TEMPLATES["settlement_offer"]
-    elif tone == "formal":
-        template_data = COMMS_TEMPLATES["formal_notice"]
-    elif channel == "WhatsApp":
-        template_data = COMMS_TEMPLATES["soft_reminder_whatsapp"]
-    elif tone == "empathetic":
-        template_data = COMMS_TEMPLATES["empathetic_engagement"]
+    # Determine channel for output
+    if channel in ("WhatsApp", "SMS"):
+        output_channel = channel
+        max_length = "160 characters for SMS, 300 for WhatsApp"
     else:
-        template_data = COMMS_TEMPLATES["soft_reminder_sms"]
+        output_channel = "Email"
+        max_length = "3-4 paragraphs"
 
-    # Fill template
-    settlement_pct = 60 if dpd > 90 else 80
-    filled = template_data["template"].format(
-        name=name,
-        product=product,
-        amount=f"{balance:,.2f}",
-        days_past_due=dpd,
-        payment_link="https://pay.oakbrook.co.uk/XXXXX",
-        settlement_amount=f"{balance * (settlement_pct / 100):,.2f}",
-        discount=100 - settlement_pct,
-    )
+    # Get Open Banking data if available
+    ob = get_open_banking_data(customer_id)
+    ob_context = ""
+    if ob:
+        ob_context = f"Open Banking data shows £{ob.get('available_for_repayment', 0)}/month available for repayment, income stability: {ob.get('income_stability', 'unknown')}."
+
+    # Call LLM to generate personalised communication
+    try:
+        from backend.agent import get_llm_client
+        client, model = get_llm_client()
+
+        prompt = f"""You are a collections communications specialist at Oakbrook Finance, a UK non-prime lender.
+Generate a {output_channel} message for this customer. Follow FCA Consumer Duty guidelines.
+
+CUSTOMER PROFILE:
+- Name: {name}
+- Product: {product}
+- Outstanding balance: £{balance:,.2f}
+- Days past due: {dpd}
+- Months in arrears: {mia}
+- Employment: {employment}
+- Last contact outcome: {outcome}
+- Preferred channel: {channel}
+{f'- {ob_context}' if ob_context else ''}
+
+TONE: {tone}
+- friendly: Warm, supportive, solution-focused. For low-risk customers.
+- empathetic: Understanding, acknowledge difficulty, offer flexibility. For engaged customers.
+- formal: Professional, clear on consequences, but fair. For mid-arrears.
+- sensitive: Extra care, no pressure, offer debt advice referrals (StepChange 0800 138 1111). For vulnerable customers.
+
+REQUIREMENTS:
+- Channel: {output_channel} ({max_length})
+- Include Oakbrook Finance branding
+- Include a way to pay or contact (0800 XXX XXXX or https://pay.oakbrook.co.uk)
+- If formal/sensitive, include debt advice referral (StepChange or Citizens Advice)
+- Do NOT use threatening language
+- Must comply with FCA Consumer Duty
+
+Write ONLY the message text, nothing else."""
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        filled = response.choices[0].message.content.strip()
+        source = f"LLM-generated ({model}) via FMAPI"
+
+    except Exception as e:
+        logger.warning(f"LLM comms generation failed, using template: {e}")
+        # Fallback to template
+        if tone == "sensitive":
+            template_data = COMMS_TEMPLATES["vulnerability_sensitive"]
+        elif tone == "formal" and dpd > 90:
+            template_data = COMMS_TEMPLATES["settlement_offer"]
+        elif tone == "formal":
+            template_data = COMMS_TEMPLATES["formal_notice"]
+        elif channel == "WhatsApp":
+            template_data = COMMS_TEMPLATES["soft_reminder_whatsapp"]
+        elif tone == "empathetic":
+            template_data = COMMS_TEMPLATES["empathetic_engagement"]
+        else:
+            template_data = COMMS_TEMPLATES["soft_reminder_sms"]
+
+        settlement_pct = 60 if dpd > 90 else 80
+        filled = template_data["template"].format(
+            name=name, product=product, amount=f"{balance:,.2f}",
+            days_past_due=dpd, payment_link="https://pay.oakbrook.co.uk/XXXXX",
+            settlement_amount=f"{balance * (settlement_pct / 100):,.2f}",
+            discount=100 - settlement_pct,
+        )
+        output_channel = template_data["channel"]
+        source = "Template fallback (LLM unavailable)"
 
     return {
         "customer_id": customer_id,
-        "channel": template_data["channel"],
-        "tone": template_data["tone"],
+        "channel": output_channel,
+        "tone": tone.capitalize(),
         "message": filled,
-        "source": "RAG Template Store — personalised via LLM",
+        "source": source,
         "compliance_check": {
             "fca_compliant": True,
-            "includes_debt_advice_referral": "StepChange" in filled or "Citizens Advice" in filled or tone in ("friendly", "empathetic"),
-            "includes_contact_info": True,
+            "includes_debt_advice_referral": any(x in filled.lower() for x in ["stepchange", "citizens advice", "0800 138"]),
+            "includes_contact_info": any(x in filled.lower() for x in ["0800", "pay.oakbrook", "call", "reply"]),
         },
     }
 
