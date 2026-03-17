@@ -1,0 +1,98 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#1e6fbc",
+    "primaryTextColor": "#ffffff",
+    "primaryBorderColor": "#1557a0",
+    "lineColor": "#94a3b8",
+    "background": "#ffffff",
+    "mainBkg": "#f8fafc",
+    "clusterBkg": "#f8fafc",
+    "fontFamily": "Segoe UI, Inter, Arial, sans-serif",
+    "fontSize": "13px"
+  }
+}}%%
+flowchart TB
+
+    subgraph L1["USER INTERFACE — Databricks App"]
+        APP["Collections Brain<br/>Chat UI + Portfolio Sidebar<br/><i>FastAPI + HTML</i>"]
+    end
+
+    subgraph L2["AI AGENT — Multi-Agent Supervisor"]
+        LLM["Claude Sonnet 4.6 via FMAPI<br/><i>Tool-calling orchestration loop</i>"]
+    end
+
+    subgraph L3["AGENT TOOLS"]
+        direction TB
+        subgraph ML["ML Models — MLflow Model Serving"]
+            direction LR
+            PTP["Propensity-to-Pay<br/><i>ptp-v3.2.1 · ~1000 features</i>"]
+            BTC["Best-Time-to-Contact<br/><i>btc-v2.1.0 · behavioural</i>"]
+        end
+        subgraph DL["Data Lookup — Unity Catalog"]
+            direction LR
+            C360["Customer 360<br/><i>Feature Tables</i>"]
+            PAY["Payment History<br/><i>Structured Streaming</i>"]
+            OB["Open Banking<br/><i>ClearScore API</i>"]
+        end
+        subgraph BR["Business Rules & Comms"]
+            direction LR
+            SC["Collection Scorecard<br/><i>MCP Server v2.4</i>"]
+            VUL["Vulnerability Engine<br/><i>FCA Consumer Duty</i>"]
+            RAG["Comms Generator<br/><i>RAG · Vector Search</i>"]
+        end
+    end
+
+    subgraph L4["GOVERNANCE — MLflow 3.0 + Unity Catalog"]
+        direction LR
+        MLF["MLflow Tracing<br/><i>Full audit trail</i>"]
+        UC["Unity Catalog<br/><i>Governance · Lineage</i>"]
+    end
+
+    subgraph L5["DATA SOURCES — Lakeflow Connect"]
+        direction LR
+        ORA["Oracle DB<br/><i>Loan Mgmt · CDC</i>"]
+        ICE["SQL Server<br/><i>IceNet · CDC</i>"]
+        ZEN["Zendesk<br/><i>Contacts · Stream</i>"]
+        SFTP2["SFTP<br/><i>Collections</i>"]
+        CS["ClearScore<br/><i>Open Banking</i>"]
+    end
+
+    APP --> LLM
+    LLM --> PTP & BTC
+    LLM --> C360 & PAY & OB
+    LLM --> SC & VUL & RAG
+    LLM -.->|"trace"| MLF
+    C360 -.-> UC
+    ORA --> C360
+    ICE --> C360
+    ZEN --> PAY
+    CS --> OB
+    SFTP2 --> C360
+
+    style APP fill:#1a365d,stroke:#1a365d,color:#fff
+    style LLM fill:#0d2b4e,stroke:#07192e,color:#fff
+    style PTP fill:#276749,stroke:#22543d,color:#fff
+    style BTC fill:#276749,stroke:#22543d,color:#fff
+    style C360 fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style PAY fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style OB fill:#2b6cb0,stroke:#2a4365,color:#fff
+    style SC fill:#6b46c1,stroke:#553c9a,color:#fff
+    style VUL fill:#6b46c1,stroke:#553c9a,color:#fff
+    style RAG fill:#6b46c1,stroke:#553c9a,color:#fff
+    style MLF fill:#c05621,stroke:#9c4221,color:#fff
+    style UC fill:#c05621,stroke:#9c4221,color:#fff
+    style ORA fill:#dd6b20,stroke:#c05621,color:#fff
+    style ICE fill:#dd6b20,stroke:#c05621,color:#fff
+    style ZEN fill:#dd6b20,stroke:#c05621,color:#fff
+    style SFTP2 fill:#dd6b20,stroke:#c05621,color:#fff
+    style CS fill:#dd6b20,stroke:#c05621,color:#fff
+
+    style L1 fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f
+    style L2 fill:#e8edf7,stroke:#1a3a5c,stroke-width:2px,color:#1a3a5c
+    style L3 fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#14532d
+    style ML fill:#dcfce7,stroke:#16a34a,stroke-width:1px,color:#14532d
+    style DL fill:#dbeafe,stroke:#3b82f6,stroke-width:1px,color:#1e3a5f
+    style BR fill:#f3e8ff,stroke:#9333ea,stroke-width:1px,color:#3b0764
+    style L4 fill:#fff7ed,stroke:#ea580c,stroke-width:2px,color:#431407
+    style L5 fill:#fff7ed,stroke:#f97316,stroke-width:2px,color:#431407

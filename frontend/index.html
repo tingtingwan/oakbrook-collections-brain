@@ -33,7 +33,7 @@
         .header {
             background: var(--primary);
             color: white;
-            padding: 16px 24px;
+            padding: 12px 24px;
             display: flex;
             align-items: center;
             gap: 16px;
@@ -49,21 +49,27 @@
             font-size: 11px;
             font-weight: 600;
         }
-        .header .powered-by {
+        .header-tabs {
             margin-left: auto;
-            font-size: 12px;
-            opacity: 0.7;
             display: flex;
-            align-items: center;
-            gap: 6px;
+            gap: 4px;
         }
+        .header-tab {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: transparent;
+            color: rgba(255,255,255,0.7);
+            transition: all 0.15s;
+        }
+        .header-tab:hover { background: rgba(255,255,255,0.1); color: white; }
+        .header-tab.active { background: rgba(255,255,255,0.2); color: white; border-color: rgba(255,255,255,0.4); }
 
         /* Main layout */
-        .main {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+        .main { display: flex; flex: 1; overflow: hidden; }
 
         /* Sidebar */
         .sidebar {
@@ -81,11 +87,7 @@
             font-size: 14px;
             color: var(--primary);
         }
-        .customer-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-        }
+        .customer-list { flex: 1; overflow-y: auto; padding: 8px; }
         .customer-card {
             padding: 12px;
             border-radius: 8px;
@@ -98,174 +100,125 @@
         .customer-card.selected { border-color: var(--primary); background: #ebf0ff; }
         .customer-card .name { font-weight: 600; font-size: 14px; }
         .customer-card .product { font-size: 12px; color: var(--text-light); }
-        .customer-card .meta {
-            display: flex;
-            gap: 8px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-        .customer-card .tag {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 500;
-        }
+        .customer-card .meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .customer-card .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
         .tag-low { background: #c6f6d5; color: #22543d; }
         .tag-medium { background: #fefcbf; color: #744210; }
         .tag-high { background: #fed7d7; color: #822727; }
         .tag-dpd { background: #e2e8f0; color: #4a5568; }
         .tag-balance { background: #bee3f8; color: #2a4365; }
 
-        /* Chat area */
-        .chat-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .messages {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .message {
-            max-width: 85%;
-            padding: 14px 18px;
-            border-radius: 12px;
-            line-height: 1.6;
-            font-size: 14px;
-            white-space: pre-wrap;
-        }
-        .message.user {
-            align-self: flex-end;
-            background: var(--primary);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-        .message.assistant {
-            align-self: flex-start;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-bottom-left-radius: 4px;
-        }
-        .message.assistant .content { white-space: pre-wrap; }
-        .message.assistant .content strong,
-        .message.assistant .content b { font-weight: 600; }
+        /* Tab panels */
+        .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+        .tab-panel.active { display: flex; }
 
-        /* Trace panel */
-        .trace-toggle {
-            display: inline-block;
-            margin-top: 10px;
-            font-size: 12px;
-            color: var(--primary-light);
-            cursor: pointer;
-            user-select: none;
-        }
+        /* Chat area */
+        .chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+        .message { max-width: 85%; padding: 14px 18px; border-radius: 12px; line-height: 1.6; font-size: 14px; white-space: pre-wrap; }
+        .message.user { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+        .message.assistant { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+        .message.assistant .content { white-space: pre-wrap; }
+        .message.assistant .content strong, .message.assistant .content b { font-weight: 600; }
+
+        .trace-toggle { display: inline-block; margin-top: 10px; font-size: 12px; color: var(--primary-light); cursor: pointer; user-select: none; }
         .trace-toggle:hover { text-decoration: underline; }
-        .trace-panel {
-            display: none;
-            margin-top: 8px;
-            padding: 10px;
-            background: #f7fafc;
-            border-radius: 6px;
-            font-size: 12px;
-            font-family: 'SF Mono', Monaco, Consolas, monospace;
-            border: 1px solid var(--border);
-        }
+        .trace-panel { display: none; margin-top: 8px; padding: 10px; background: #f7fafc; border-radius: 6px; font-size: 12px; font-family: 'SF Mono', Monaco, Consolas, monospace; border: 1px solid var(--border); }
         .trace-panel.open { display: block; }
-        .trace-step {
-            padding: 4px 0;
-            border-bottom: 1px solid #edf2f7;
-        }
+        .trace-step { padding: 4px 0; border-bottom: 1px solid #edf2f7; }
         .trace-step:last-child { border-bottom: none; }
         .trace-tool { color: var(--accent); font-weight: 600; }
         .trace-iter { color: var(--text-light); }
 
-        /* Welcome message */
-        .welcome {
-            text-align: center;
-            padding: 60px 40px;
-            color: var(--text-light);
-        }
+        .welcome { text-align: center; padding: 60px 40px; color: var(--text-light); }
         .welcome h2 { color: var(--primary); margin-bottom: 12px; font-size: 22px; }
         .welcome p { margin-bottom: 20px; font-size: 14px; line-height: 1.6; }
-        .suggestions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-        }
-        .suggestion {
-            background: var(--card);
-            border: 1px solid var(--border);
-            padding: 10px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+        .suggestions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .suggestion { background: var(--card); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: all 0.15s; }
         .suggestion:hover { border-color: var(--primary); background: #f0f4ff; }
 
-        /* Input area */
-        .input-area {
-            padding: 16px 24px;
-            border-top: 1px solid var(--border);
-            background: var(--card);
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-        }
-        .input-area textarea {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: none;
-            outline: none;
-            min-height: 44px;
-            max-height: 120px;
-            line-height: 1.4;
-        }
+        .input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: var(--card); display: flex; gap: 12px; align-items: flex-end; }
+        .input-area textarea { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; resize: none; outline: none; min-height: 44px; max-height: 120px; line-height: 1.4; }
         .input-area textarea:focus { border-color: var(--primary); }
-        .input-area button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s;
-            white-space: nowrap;
-        }
+        .input-area button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.15s; white-space: nowrap; }
         .input-area button:hover { background: var(--primary-light); }
         .input-area button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Loading */
         .loading { display: flex; gap: 4px; padding: 8px 0; }
-        .loading span {
-            width: 8px; height: 8px;
-            background: var(--primary-light);
-            border-radius: 50%;
-            animation: bounce 1.2s infinite;
-        }
+        .loading span { width: 8px; height: 8px; background: var(--primary-light); border-radius: 50%; animation: bounce 1.2s infinite; }
         .loading span:nth-child(2) { animation-delay: 0.2s; }
         .loading span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes bounce {
-            0%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-8px); }
-        }
+        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-8px); } }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar { display: none; }
+        /* Architecture tab */
+        .arch-content { flex: 1; overflow-y: auto; padding: 32px; }
+        .arch-content h2 { color: var(--primary); font-size: 20px; margin-bottom: 20px; }
+        .arch-content h3 { color: var(--primary); font-size: 16px; margin: 24px 0 12px; }
+        .arch-diagram { text-align: center; margin: 24px 0; }
+        .arch-diagram img { max-width: 100%; border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+        /* Component cards */
+        .component-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 16px; }
+        .component-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.15s;
+            border-left: 4px solid var(--border);
         }
+        .component-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        .component-card.cat-ml { border-left-color: #38a169; }
+        .component-card.cat-data { border-left-color: #3182ce; }
+        .component-card.cat-agent { border-left-color: #805ad5; }
+        .component-card.cat-govern { border-left-color: #dd6b20; }
+        .component-card.cat-app { border-left-color: #e53e3e; }
+        .component-card .comp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .component-card .comp-icon { font-size: 20px; }
+        .component-card .comp-title { font-weight: 600; font-size: 15px; color: var(--primary); }
+        .component-card .comp-desc { font-size: 13px; color: var(--text-light); line-height: 1.5; margin-bottom: 10px; }
+        .component-card .comp-tool { font-size: 12px; color: var(--accent); font-family: monospace; margin-bottom: 8px; }
+        .component-card .comp-link {
+            display: inline-block;
+            font-size: 12px;
+            color: var(--primary-light);
+            text-decoration: none;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            transition: all 0.15s;
+            margin-right: 6px;
+            margin-top: 4px;
+        }
+        .component-card .comp-link:hover { background: #f0f4ff; border-color: var(--primary-light); }
+
+        /* Production roadmap */
+        .roadmap { margin-top: 24px; }
+        .roadmap-step {
+            display: flex;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .roadmap-step:last-child { border-bottom: none; }
+        .roadmap-num {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .roadmap-text { flex: 1; }
+        .roadmap-text strong { display: block; margin-bottom: 4px; }
+        .roadmap-text span { font-size: 13px; color: var(--text-light); }
+
+        @media (max-width: 768px) { .sidebar { display: none; } }
     </style>
 </head>
 <body>
@@ -275,44 +228,296 @@
             <div class="subtitle">AI-Powered Collections Strategy</div>
         </div>
         <span class="badge">DEMO</span>
-        <div class="powered-by">
-            Powered by Databricks | MLflow 3.0 | Model Serving
+        <div class="header-tabs">
+            <div class="header-tab active" onclick="switchTab('chat')">Agent Chat</div>
+            <div class="header-tab" onclick="switchTab('arch')">Architecture</div>
+            <div class="header-tab" onclick="switchTab('build')">How to Build This</div>
         </div>
     </div>
 
     <div class="main">
         <div class="sidebar">
             <div class="sidebar-header">Collections Portfolio</div>
-            <div class="customer-list" id="customerList">
-                <!-- Populated by JS -->
+            <div class="customer-list" id="customerList"></div>
+        </div>
+
+        <!-- TAB 1: Agent Chat -->
+        <div class="tab-panel active" id="tab-chat">
+            <div class="chat-area">
+                <div class="messages" id="messages">
+                    <div class="welcome" id="welcome">
+                        <h2>Oakbrook Collections Brain</h2>
+                        <p>AI agent that combines Customer 360 data, propensity-to-pay models,<br>
+                        and best-time-to-contact predictions to optimise collection strategies.</p>
+                        <p style="font-size: 12px; color: #a0aec0;">
+                            Feature Tables &bull; MLflow 3.0 Model Serving &bull; Structured Streaming &bull; MCP Server (Scorecard)<br>
+                            Multi-Agent Supervisor &bull; RAG Comms &bull; Open Banking &bull; FCA Vulnerability Engine
+                        </p>
+                        <div class="suggestions" id="suggestions">
+                            <div class="suggestion" onclick="sendSuggestion(this)">Show me the full portfolio and prioritise by risk</div>
+                            <div class="suggestion" onclick="sendSuggestion(this)">Run a full analysis on C-10001 — models, scorecard, vulnerability, and strategy</div>
+                            <div class="suggestion" onclick="sendSuggestion(this)">Which customers have the highest propensity to pay?</div>
+                            <div class="suggestion" onclick="sendSuggestion(this)">Check Open Banking affordability for C-10002 and draft a WhatsApp message</div>
+                            <div class="suggestion" onclick="sendSuggestion(this)">Assess vulnerability for C-10003 and recommend a sensitive approach</div>
+                            <div class="suggestion" onclick="sendSuggestion(this)">Generate a weekly contact plan for all customers</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-area">
+                    <textarea id="input" placeholder="Ask the Collections Brain about customers, strategies, or compliance..." rows="1"
+                        onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
+                    <button id="sendBtn" onclick="sendMessage()">Send</button>
+                </div>
             </div>
         </div>
 
-        <div class="chat-area">
-            <div class="messages" id="messages">
-                <div class="welcome" id="welcome">
-                    <h2>Oakbrook Collections Brain</h2>
-                    <p>AI agent that combines Customer 360 data, propensity-to-pay models,<br>
-                    and best-time-to-contact predictions to optimise collection strategies.</p>
-                    <p style="font-size: 12px; color: #a0aec0;">
-                        Feature Tables &bull; MLflow 3.0 Model Serving &bull; Structured Streaming &bull; MCP Server (Scorecard)<br>
-                        Multi-Agent Supervisor &bull; RAG Comms &bull; Open Banking &bull; FCA Vulnerability Engine
-                    </p>
-                    <div class="suggestions" id="suggestions">
-                        <div class="suggestion" onclick="sendSuggestion(this)">Show me the full portfolio and prioritise by risk</div>
-                        <div class="suggestion" onclick="sendSuggestion(this)">Run a full analysis on C-10001 — models, scorecard, vulnerability, and strategy</div>
-                        <div class="suggestion" onclick="sendSuggestion(this)">Which customers have the highest propensity to pay?</div>
-                        <div class="suggestion" onclick="sendSuggestion(this)">Check Open Banking affordability for C-10002 and draft a WhatsApp message</div>
-                        <div class="suggestion" onclick="sendSuggestion(this)">Assess vulnerability for C-10003 and recommend a sensitive approach</div>
-                        <div class="suggestion" onclick="sendSuggestion(this)">Generate a weekly contact plan for all customers</div>
-                    </div>
+        <!-- TAB 2: Architecture -->
+        <div class="tab-panel" id="tab-arch">
+            <div class="arch-content">
+                <h2>System Architecture</h2>
+                <p style="color: var(--text-light); margin-bottom: 16px;">How the Collections Brain orchestrates Databricks capabilities to deliver AI-optimised collection strategies.</p>
+
+                <div class="arch-diagram" id="archDiagram">
+                    <img src="/api/architecture" alt="Collections Brain Architecture" onerror="this.parentElement.innerHTML='<p style=\'color:#a0aec0;padding:40px;\'>Architecture diagram loading... Check the Architecture tab after deployment.</p>'">
+                </div>
+
+                <h3>Data Flow</h3>
+                <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-size: 13px; line-height: 2; font-family: monospace;">
+                    <strong>1. Ingest</strong> &rarr; Oracle (Lakeflow Connect CDC) + IceNet (SQL Server) + Zendesk (Streaming) + SFTP<br>
+                    <strong>2. Process</strong> &rarr; Medallion architecture (Bronze &rarr; Silver &rarr; Gold) in Unity Catalog<br>
+                    <strong>3. Feature Store</strong> &rarr; Customer 360 Feature Table with ~1,000 features<br>
+                    <strong>4. Train</strong> &rarr; Propensity-to-Pay + Best-Time-to-Contact models (MLflow experiment tracking)<br>
+                    <strong>5. Deploy</strong> &rarr; Register models in MLflow Registry, deploy to Model Serving endpoints<br>
+                    <strong>6. Serve</strong> &rarr; Real-time scoring via Model Serving with Feature Table auto-lookup<br>
+                    <strong>7. Orchestrate</strong> &rarr; Multi-Agent Supervisor calls models + MCP scorecard + RAG comms<br>
+                    <strong>8. Trace</strong> &rarr; Every agent decision logged in MLflow 3.0 for FCA audit compliance
                 </div>
             </div>
+        </div>
 
-            <div class="input-area">
-                <textarea id="input" placeholder="Ask the Collections Brain about customers, strategies, or compliance..." rows="1"
-                    onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault(); sendMessage();}"></textarea>
-                <button id="sendBtn" onclick="sendMessage()">Send</button>
+        <!-- TAB 3: How to Build This -->
+        <div class="tab-panel" id="tab-build">
+            <div class="arch-content">
+                <h2>How to Build This</h2>
+                <p style="color: var(--text-light); margin-bottom: 8px;">Each component maps to a Databricks capability. Click the documentation links to learn how to build each piece.</p>
+
+                <h3>ML &amp; AI Components</h3>
+                <div class="component-grid">
+                    <div class="component-card cat-ml">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F3AF;</span>
+                            <span class="comp-title">Propensity-to-Pay Model</span>
+                        </div>
+                        <div class="comp-tool">Tool: score_propensity_to_pay &rarr; MLflow Model Serving</div>
+                        <div class="comp-desc">ML model scoring likelihood of payment using ~1,000 features (employment, payment history, Open Banking data). Served in real-time via Model Serving with Feature Table auto-lookup.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/model-serving/index.html" target="_blank">Model Serving Docs</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/index.html" target="_blank">MLflow on Databricks</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/feature-store/index.html" target="_blank">Feature Engineering</a>
+                    </div>
+                    <div class="component-card cat-ml">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x23F0;</span>
+                            <span class="comp-title">Best-Time-to-Contact Model</span>
+                        </div>
+                        <div class="comp-tool">Tool: score_best_time_to_contact &rarr; MLflow Model Serving</div>
+                        <div class="comp-desc">Behavioural pattern analysis model predicting optimal day, time window, and channel for customer outreach. Uses employment patterns and historical contact success data.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/model-serving/create-manage-serving-endpoints.html" target="_blank">Create Serving Endpoint</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/tracking/index.html" target="_blank">MLflow Experiment Tracking</a>
+                    </div>
+                    <div class="component-card cat-agent">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F916;</span>
+                            <span class="comp-title">Multi-Agent Supervisor</span>
+                        </div>
+                        <div class="comp-tool">Tool: recommend_strategy &rarr; Agent Framework</div>
+                        <div class="comp-desc">Orchestrates all tools: runs PTP model, BTC model, scorecard, vulnerability assessment, Open Banking check, then combines into an actionable strategy with compliance flags.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/index.html" target="_blank">Agent Framework</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/create-agent.html" target="_blank">Create an Agent</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/foundation-models/index.html" target="_blank">Foundation Model APIs</a>
+                    </div>
+                    <div class="component-card cat-agent">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F4AC;</span>
+                            <span class="comp-title">Communication Generation (RAG)</span>
+                        </div>
+                        <div class="comp-tool">Tool: generate_communication &rarr; Vector Search + LLM</div>
+                        <div class="comp-desc">Retrieves tone-appropriate communication templates from a Vector Search index, then personalises with customer data. Auto-selects tone (friendly/empathetic/formal/sensitive) based on vulnerability and arrears.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/vector-search/index.html" target="_blank">Vector Search</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/retrieval-augmented-generation.html" target="_blank">RAG on Databricks</a>
+                    </div>
+                </div>
+
+                <h3>Data &amp; Streaming Components</h3>
+                <div class="component-grid">
+                    <div class="component-card cat-data">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F464;</span>
+                            <span class="comp-title">Customer 360 Feature Table</span>
+                        </div>
+                        <div class="comp-tool">Tool: lookup_customer &rarr; Feature Tables (Unity Catalog)</div>
+                        <div class="comp-desc">Unified customer profile combining demographics, account details, contact history, risk segments, and vulnerability flags. Materialised from Oracle loan system + IceNet + Zendesk via Lakeflow Connect.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/machine-learning/feature-store/uc/feature-tables-uc.html" target="_blank">Feature Tables in UC</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html" target="_blank">Unity Catalog</a>
+                    </div>
+                    <div class="component-card cat-data">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x26A1;</span>
+                            <span class="comp-title">Real-Time Payment Signals</span>
+                        </div>
+                        <div class="comp-tool">Tool: get_payment_history &rarr; Structured Streaming</div>
+                        <div class="comp-desc">Near-real-time ingestion of payment events, DD cancellations, and partial payments. Enables immediate signal detection (e.g., customer cancels direct debit &rarr; trigger proactive outreach).</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/structured-streaming/index.html" target="_blank">Structured Streaming</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/delta-live-tables/index.html" target="_blank">Delta Live Tables</a>
+                    </div>
+                    <div class="component-card cat-data">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F50C;</span>
+                            <span class="comp-title">Data Ingestion (Lakeflow Connect)</span>
+                        </div>
+                        <div class="comp-tool">Oracle CDC + SQL Server + SFTP + Zendesk</div>
+                        <div class="comp-desc">Managed connectors for ingesting from Oracle (loan management), SQL Server/IceNet, SFTP (collections providers), and Zendesk (customer contacts). CDC-based for real-time, query-based for batch.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/connect/index.html" target="_blank">Lakeflow Connect</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/connect/ingestion/oracle/index.html" target="_blank">Oracle Connector</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/connect/ingestion/sql-server/index.html" target="_blank">SQL Server Connector</a>
+                    </div>
+                    <div class="component-card cat-data">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F3E6;</span>
+                            <span class="comp-title">Open Banking / ClearScore</span>
+                        </div>
+                        <div class="comp-tool">Tool: get_open_banking_data &rarr; External API Integration</div>
+                        <div class="comp-desc">Verified affordability data from ClearScore/aggregators: income, expenses, disposable income, gambling detection. Used for FCA-compliant affordability assessments and payment plan recommendations.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/connect/index.html" target="_blank">Partner Connectors</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/structured-streaming/index.html" target="_blank">API Ingestion via Streaming</a>
+                    </div>
+                </div>
+
+                <h3>Governance &amp; Compliance Components</h3>
+                <div class="component-grid">
+                    <div class="component-card cat-govern">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F9FE;</span>
+                            <span class="comp-title">Collection Scorecard (MCP Server)</span>
+                        </div>
+                        <div class="comp-tool">Tool: get_scorecard_segment &rarr; MCP Server</div>
+                        <div class="comp-desc">Scorecard validation logic served as an MCP tool. Matches customers to collection segments (Early/Mid/Late/Pre-Litigation) with strategy, contact frequency limits, and escalation triggers.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/mcp-server.html" target="_blank">MCP Server on Databricks</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/build-custom-agent-tool.html" target="_blank">Custom Agent Tools</a>
+                    </div>
+                    <div class="component-card cat-govern">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F6E1;</span>
+                            <span class="comp-title">FCA Vulnerability Engine</span>
+                        </div>
+                        <div class="comp-tool">Tool: assess_vulnerability &rarr; Business Rules + Open Banking</div>
+                        <div class="comp-desc">Automated vulnerability screening per FCA Consumer Duty. Checks employment, arrears depth, engagement patterns, Open Banking signals (gambling), and existing flags. Determines handling approach.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/index.html" target="_blank">Data Governance</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/data-governance/unity-catalog/manage-privileges/index.html" target="_blank">Access Control</a>
+                    </div>
+                    <div class="component-card cat-govern">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F4CA;</span>
+                            <span class="comp-title">MLflow 3.0 Tracing (Audit Trail)</span>
+                        </div>
+                        <div class="comp-tool">Every tool call &rarr; MLflow Trace</div>
+                        <div class="comp-desc">Full traceability of every agent decision — which models were called, what scores were returned, what strategy was recommended. Essential for FCA "Why did you prioritise this customer?" questions.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/llm-tracing/index.html" target="_blank">MLflow Tracing</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/index.html" target="_blank">MLflow 3.0</a>
+                    </div>
+                </div>
+
+                <h3>Agent Memory &amp; Output Channels</h3>
+                <div class="component-grid">
+                    <div class="component-card cat-data">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F9E0;</span>
+                            <span class="comp-title">Agent Memory (Lakebase)</span>
+                        </div>
+                        <div class="comp-tool">Conversation history &rarr; Lakebase (PostgreSQL)</div>
+                        <div class="comp-desc">Persistent conversation memory stored in Lakebase (Databricks-managed PostgreSQL). Enables multi-turn conversations, session continuity, and audit logging. PostgreSQL-compatible — familiar query patterns, no infrastructure to manage.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/database/lakebase/index.html" target="_blank">Lakebase Docs</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/database/lakebase/get-started.html" target="_blank">Get Started</a>
+                    </div>
+                    <div class="component-card cat-app">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F4F2;</span>
+                            <span class="comp-title">WhatsApp Output Channel</span>
+                        </div>
+                        <div class="comp-tool">generate_communication &rarr; WhatsApp Business API</div>
+                        <div class="comp-desc">Agent-generated messages delivered via WhatsApp Business API. Tone auto-selected based on vulnerability and arrears. Templates pre-approved for FCA compliance. Integrates with existing MSFT Agent / comms infrastructure.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/generative-ai/agent-framework/build-custom-agent-tool.html" target="_blank">Custom Tools</a>
+                    </div>
+                    <div class="component-card cat-govern">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F50D;</span>
+                            <span class="comp-title">MLflow 3.0 Tracing <span style="font-size:11px;color:#718096;">(vs Langfuse)</span></span>
+                        </div>
+                        <div class="comp-tool">Agent traces &rarr; MLflow 3.0 (native Databricks)</div>
+                        <div class="comp-desc">MLflow 3.0 provides the same LLM observability as Langfuse — prompt tracking, trace visualisation, latency monitoring — but natively integrated with Databricks. No separate infrastructure. Unity Catalog governed. Already used for model versioning.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/llm-tracing/index.html" target="_blank">MLflow Tracing</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/mlflow/tracking/index.html" target="_blank">Experiment Tracking</a>
+                    </div>
+                </div>
+
+                <h3>Application Layer</h3>
+                <div class="component-grid">
+                    <div class="component-card cat-app">
+                        <div class="comp-header">
+                            <span class="comp-icon">&#x1F4F1;</span>
+                            <span class="comp-title">Databricks App (This Demo)</span>
+                        </div>
+                        <div class="comp-tool">FastAPI + HTML &rarr; Databricks Apps</div>
+                        <div class="comp-desc">Full-stack application hosted on Databricks Apps. FastAPI backend with agent orchestration, served via uvicorn. Authenticated via workspace SSO. No external infrastructure required.</div>
+                        <a class="comp-link" href="https://docs.databricks.com/en/databricks-apps/index.html" target="_blank">Databricks Apps</a>
+                        <a class="comp-link" href="https://docs.databricks.com/en/databricks-apps/app-tutorial.html" target="_blank">App Tutorial</a>
+                    </div>
+                </div>
+
+                <h3>Production Roadmap</h3>
+                <div class="roadmap">
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">1</div>
+                        <div class="roadmap-text">
+                            <strong>Data Ingestion</strong>
+                            <span>Materialise Customer 360 from Oracle (via Lakeflow Connect CDC) + IceNet + Zendesk. Set up DLT pipelines for Bronze &rarr; Silver &rarr; Gold medallion layers.</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">2</div>
+                        <div class="roadmap-text">
+                            <strong>Feature Engineering</strong>
+                            <span>Create Feature Tables in Unity Catalog with ~1,000 features from historical collections data. Include Open Banking signals, ClearScore bands, and contact outcomes.</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">3</div>
+                        <div class="roadmap-text">
+                            <strong>Model Training &amp; Registry</strong>
+                            <span>Train propensity-to-pay and best-time-to-contact models using MLflow experiment tracking. Register champion models in MLflow Model Registry with approval workflows.</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">4</div>
+                        <div class="roadmap-text">
+                            <strong>Model Serving</strong>
+                            <span>Deploy models to real-time Model Serving endpoints with Feature Table auto-lookup. Set up A/B testing between model versions.</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">5</div>
+                        <div class="roadmap-text">
+                            <strong>Agent Orchestration</strong>
+                            <span>Build Multi-Agent Supervisor using Agent Framework. Wire up MCP Server for scorecard, Vector Search for RAG comms templates. Enable MLflow 3.0 tracing for full audit trail.</span>
+                        </div>
+                    </div>
+                    <div class="roadmap-step">
+                        <div class="roadmap-num">6</div>
+                        <div class="roadmap-text">
+                            <strong>Production App</strong>
+                            <span>Deploy as a Databricks App with workspace SSO. Integrate with existing MSFT Agent / comms channels for WhatsApp, SMS, and email delivery. Target: >20% Cure/Roll uplift, 70hr/month automation savings.</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -320,8 +525,15 @@
     <script>
         let chatMessages = [];
         let isLoading = false;
+        const sessionId = 'session-' + Date.now();
 
-        // Load customers into sidebar
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
         async function loadCustomers() {
             try {
                 const res = await fetch('/api/customers');
@@ -334,7 +546,7 @@
                         <div class="meta">
                             <span class="tag tag-${c.risk_segment.toLowerCase()}">${c.risk_segment} Risk</span>
                             <span class="tag tag-dpd">${c.days_past_due}d overdue</span>
-                            <span class="tag tag-balance">£${c.outstanding_balance.toLocaleString()}</span>
+                            <span class="tag tag-balance">&pound;${c.outstanding_balance.toLocaleString()}</span>
                         </div>
                     </div>
                 `).join('');
@@ -344,10 +556,11 @@
         }
 
         function selectCustomer(id, name) {
-            // Highlight selected card
             document.querySelectorAll('.customer-card').forEach(c => c.classList.remove('selected'));
             event.currentTarget.classList.add('selected');
-            // Pre-fill input
+            switchTab('chat');
+            document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.header-tab')[0].classList.add('active');
             document.getElementById('input').value = `Analyse customer ${id} (${name}) — run all models and recommend a collection strategy.`;
             document.getElementById('input').focus();
         }
@@ -362,36 +575,63 @@
             const text = input.value.trim();
             if (!text || isLoading) return;
 
-            // Hide welcome
             const welcome = document.getElementById('welcome');
             if (welcome) welcome.style.display = 'none';
 
-            // Add user message
             chatMessages.push({ role: 'user', content: text });
             appendMessage('user', text);
             input.value = '';
             autoResize(input);
 
-            // Show loading
             isLoading = true;
             document.getElementById('sendBtn').disabled = true;
             const loadingEl = appendLoading();
 
             try {
-                const res = await fetch('/api/chat', {
+                const res = await fetch('/api/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: chatMessages }),
+                    body: JSON.stringify({ messages: chatMessages, session_id: sessionId }),
                 });
-                const data = await res.json();
+
                 loadingEl.remove();
 
                 if (!res.ok) {
-                    const errMsg = data.detail || data.error || JSON.stringify(data);
-                    appendMessage('assistant', `Error (${res.status}): ${errMsg}`);
+                    const data = await res.json();
+                    appendMessage('assistant', `Error (${res.status}): ${data.detail || JSON.stringify(data)}`);
                 } else {
-                    chatMessages.push({ role: 'assistant', content: data.response });
-                    appendMessage('assistant', data.response, data.trace);
+                    // Streaming response
+                    const reader = res.body.getReader();
+                    const decoder = new TextDecoder();
+                    let fullResponse = '';
+                    let trace = [];
+                    const msgDiv = appendStreamMessage();
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        const text = decoder.decode(value);
+                        const lines = text.split('\n');
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            try {
+                                const event = JSON.parse(line.slice(6));
+                                if (event.type === 'tool_call') {
+                                    trace.push(event.data);
+                                    updateStreamToolStatus(msgDiv, trace);
+                                } else if (event.type === 'token') {
+                                    fullResponse += event.data;
+                                    updateStreamContent(msgDiv, fullResponse);
+                                } else if (event.type === 'done') {
+                                    if (event.data && event.data.trace) trace = event.data.trace;
+                                }
+                            } catch(e) {}
+                        }
+                    }
+
+                    finalizeStreamMessage(msgDiv, fullResponse, trace);
+                    chatMessages.push({ role: 'assistant', content: fullResponse });
                 }
             } catch (e) {
                 loadingEl.remove();
@@ -407,18 +647,13 @@
             const div = document.createElement('div');
             div.className = `message ${role}`;
 
-            // Simple markdown-like rendering for assistant
             let html = escapeHtml(content);
             if (role === 'assistant') {
-                // Bold
                 html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                // Headers (## and ###)
                 html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;color:#1a365d;">$1</strong>');
                 html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;color:#1a365d;">$1</strong>');
-                // Bullet points with indent
-                html = html.replace(/^- (.+)$/gm, '  • $1');
-                // Numbered lists
-                html = html.replace(/^(\d+)\. (.+)$/gm, '  $1. $2');
+                html = html.replace(/^- (.+)$/gm, '&nbsp;&nbsp;&#8226; $1');
+                html = html.replace(/^(\d+)\. (.+)$/gm, '&nbsp;&nbsp;$1. $2');
             }
 
             let traceHtml = '';
@@ -426,14 +661,14 @@
                 const traceId = 'trace-' + Date.now();
                 traceHtml = `
                     <div class="trace-toggle" onclick="document.getElementById('${traceId}').classList.toggle('open')">
-                        📊 Agent Trace (${trace.length} tool calls) — click to expand
+                        &#x1F4CA; Agent Trace (${trace.length} tool calls) — click to expand
                     </div>
                     <div class="trace-panel" id="${traceId}">
                         ${trace.map(t => `
                             <div class="trace-step">
                                 <span class="trace-iter">Step ${t.iteration}</span>
                                 <span class="trace-tool">${t.tool}</span>(${JSON.stringify(t.arguments)})
-                                ${t.databricks_component ? `<br><span style="color:#718096;font-size:11px;">↳ ${t.databricks_component}</span>` : ''}
+                                ${t.databricks_component ? `<br><span style="color:#718096;font-size:11px;">&rarr; ${t.databricks_component}</span>` : ''}
                             </div>
                         `).join('')}
                     </div>
@@ -461,16 +696,63 @@
             return div.innerHTML;
         }
 
+        function appendStreamMessage() {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'message assistant';
+            div.innerHTML = '<div class="stream-tools" style="font-size:12px;color:#718096;font-family:monospace;margin-bottom:8px;"></div><div class="content" style="white-space:pre-wrap;"></div>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            return div;
+        }
+
+        function updateStreamToolStatus(div, trace) {
+            const toolsEl = div.querySelector('.stream-tools');
+            toolsEl.innerHTML = trace.map(t =>
+                `<span style="display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;font-size:11px;">&#x2705; ${t.tool} <span style="color:#a0aec0;">&rarr; ${t.databricks_component || ''}</span></span>`
+            ).join('');
+            div.closest('.messages').scrollTop = div.closest('.messages').scrollHeight;
+        }
+
+        function updateStreamContent(div, text) {
+            const contentEl = div.querySelector('.content');
+            let html = escapeHtml(text);
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/^### (.+)$/gm, '<strong style="font-size:14px;color:#1a365d;">$1</strong>');
+            html = html.replace(/^## (.+)$/gm, '<strong style="font-size:15px;color:#1a365d;">$1</strong>');
+            html = html.replace(/^- (.+)$/gm, '&nbsp;&nbsp;&#8226; $1');
+            contentEl.innerHTML = html;
+            div.closest('.messages').scrollTop = div.closest('.messages').scrollHeight;
+        }
+
+        function finalizeStreamMessage(div, fullResponse, trace) {
+            // Remove tool status chips and add trace panel
+            div.querySelector('.stream-tools').innerHTML = '';
+            if (trace && trace.length > 0) {
+                const traceId = 'trace-' + Date.now();
+                div.innerHTML += `
+                    <div class="trace-toggle" onclick="document.getElementById('${traceId}').classList.toggle('open')">
+                        &#x1F4CA; Agent Trace (${trace.length} tool calls) — click to expand
+                    </div>
+                    <div class="trace-panel" id="${traceId}">
+                        ${trace.map(t => `
+                            <div class="trace-step">
+                                <span class="trace-iter">Step ${t.iteration}</span>
+                                <span class="trace-tool">${t.tool}</span>(${JSON.stringify(t.arguments)})
+                                ${t.databricks_component ? `<br><span style="color:#718096;font-size:11px;">&rarr; ${t.databricks_component}</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+        }
+
         function autoResize(el) {
             el.style.height = 'auto';
             el.style.height = Math.min(el.scrollHeight, 120) + 'px';
         }
 
-        document.getElementById('input').addEventListener('input', function() {
-            autoResize(this);
-        });
-
-        // Init
+        document.getElementById('input').addEventListener('input', function() { autoResize(this); });
         loadCustomers();
     </script>
 </body>

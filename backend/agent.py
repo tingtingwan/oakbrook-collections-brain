@@ -492,6 +492,74 @@ async def run_agent(messages: list[dict]) -> dict:
     }
 
 
+async def run_agent_stream(messages: list[dict]):
+    """
+    Run the collections agent with streaming output.
+    Yields events: tool_call (during tool execution), token (streaming text), done.
+    """
+    client, model = get_llm_client()
+    full_messages = [{"role": "system", "content": SYSTEM_PROMPT}] + messages
+
+    trace = []
+    max_iterations = 10
+
+    for i in range(max_iterations):
+        # First, do tool-calling (non-streamed) to resolve all tools
+        response = client.chat.completions.create(
+            model=model,
+            messages=full_messages,
+            tools=TOOLS,
+            tool_choice="auto",
+        )
+
+        choice = response.choices[0]
+
+        if choice.finish_reason == "tool_calls" or (choice.message.tool_calls and len(choice.message.tool_calls) > 0):
+            full_messages.append(choice.message)
+
+            for tc in choice.message.tool_calls:
+                fn_name = tc.function.name
+                fn_args = json.loads(tc.function.arguments)
+
+                trace_entry = {
+                    "iteration": i + 1,
+                    "tool": fn_name,
+                    "arguments": fn_args,
+                    "databricks_component": _tool_to_component(fn_name),
+                }
+                trace.append(trace_entry)
+
+                # Yield tool call event so frontend can show progress
+                yield {"type": "tool_call", "data": trace_entry}
+
+                result = _execute_tool(fn_name, fn_args)
+
+                full_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": result,
+                })
+        else:
+            # Final response — stream it token by token
+            stream = client.chat.completions.create(
+                model=model,
+                messages=full_messages,
+                stream=True,
+            )
+
+            full_response = ""
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    token = chunk.choices[0].delta.content
+                    full_response += token
+                    yield {"type": "token", "data": token}
+
+            yield {"type": "done", "data": full_response}
+            return
+
+    yield {"type": "done", "data": "Agent reached maximum iterations."}
+
+
 def _tool_to_component(tool_name: str) -> str:
     """Map tool names to Databricks components for the trace UI."""
     mapping = {

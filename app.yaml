@@ -11,3 +11,9 @@ env:
     valueFrom: "{resources.serving_endpoint.host}"
   - name: DATABRICKS_TOKEN
     valueFrom: "{resources.serving_endpoint.token}"
+
+resources:
+  - name: serving_endpoint
+    serving_endpoint:
+      name: databricks-claude-sonnet-4-6
+      permission: CAN_QUERY
