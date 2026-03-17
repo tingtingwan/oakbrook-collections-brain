@@ -477,12 +477,12 @@ def get_scorecard_segment(customer_id: str, propensity_band: str) -> dict | None
     Match customer to collection scorecard segment.
     In production: MCP Server serving the scorecard SQL logic.
     """
-    c = CUSTOMERS.get(customer_id)
+    c = get_customer(customer_id)
     if not c:
         return None
 
-    dpd = c["days_past_due"]
-    outcome = c["last_contact_outcome"].lower()
+    dpd = int(c.get("days_past_due", 0))
+    outcome = str(c.get("last_contact_outcome", "")).lower()
 
     if dpd <= 30 and propensity_band == "High":
         segment = SCORECARD_RULES["segment_A"]
@@ -512,7 +512,7 @@ def assess_vulnerability(customer_id: str) -> dict | None:
     """
     Assess customer vulnerability indicators (FCA Consumer Duty requirement).
     """
-    c = CUSTOMERS.get(customer_id)
+    c = get_customer(customer_id)
     if not c:
         return None
 
@@ -520,24 +520,26 @@ def assess_vulnerability(customer_id: str) -> dict | None:
     risk_level = "Low"
 
     # Employment-based vulnerability
-    if c["employment_status"] == "Unemployed":
+    if c.get("employment_status") == "Unemployed":
         indicators.append({"type": "Financial", "detail": "Currently unemployed", "severity": "High"})
         risk_level = "High"
-    elif c["employment_status"] == "Self Employed":
+    elif c.get("employment_status") == "Self Employed":
         indicators.append({"type": "Financial", "detail": "Self-employed — income may be irregular", "severity": "Medium"})
 
     # Arrears depth
-    if c["months_in_arrears"] >= 3:
-        indicators.append({"type": "Financial", "detail": f"{c['months_in_arrears']} months in arrears — persistent debt indicator", "severity": "High"})
+    mia = int(c.get("months_in_arrears", 0))
+    if mia >= 3:
+        indicators.append({"type": "Financial", "detail": f"{mia} months in arrears — persistent debt indicator", "severity": "High"})
         risk_level = "High"
 
     # Contact engagement
-    if c["last_contact_outcome"] == "Refused to Engage":
+    if c.get("last_contact_outcome") == "Refused to Engage":
         indicators.append({"type": "Behavioural", "detail": "Refusing to engage — potential distress signal", "severity": "Medium"})
 
     # Contact frequency
-    if c["contact_attempts_30d"] >= 6:
-        indicators.append({"type": "Compliance", "detail": f"{c['contact_attempts_30d']} contact attempts in 30 days — approaching limit", "severity": "Medium"})
+    contact_attempts = int(c.get("contact_attempts_30d", 0))
+    if contact_attempts >= 6:
+        indicators.append({"type": "Compliance", "detail": f"{contact_attempts} contact attempts in 30 days — approaching limit", "severity": "Medium"})
 
     # Existing flags
     for flag in c.get("vulnerability_flags", []):
@@ -545,7 +547,7 @@ def assess_vulnerability(customer_id: str) -> dict | None:
         indicators.append({"type": "Flagged", "detail": f"Previously flagged: {label}", "severity": "Medium"})
 
     # Open Banking signals
-    ob = OPEN_BANKING_DATA.get(customer_id)
+    ob = get_open_banking_data(customer_id)
     if ob:
         if ob.get("gambling_transactions_30d", 0) > 0:
             indicators.append({"type": "Behavioural", "detail": "Gambling transactions detected in banking data", "severity": "High"})
@@ -580,26 +582,33 @@ def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
     Generate a personalised collection communication using RAG-retrieved templates.
     In production: Vector store retrieval + LLM personalisation.
     """
-    c = CUSTOMERS.get(customer_id)
+    c = get_customer(customer_id)
     if not c:
         return None
+
+    mia = int(c.get("months_in_arrears", 0))
+    dpd = int(c.get("days_past_due", 0))
+    outcome = str(c.get("last_contact_outcome", ""))
+    channel = str(c.get("preferred_channel", "SMS"))
+    name = str(c.get("name", "Customer")).split()[0]
+    product = str(c.get("product", "Account"))
+    balance = float(c.get("outstanding_balance", 0))
 
     # Auto-select tone based on customer profile
     if tone == "auto":
         if c.get("vulnerability_flags"):
             tone = "sensitive"
-        elif c["months_in_arrears"] >= 3:
+        elif mia >= 3:
             tone = "formal"
-        elif c["last_contact_outcome"] in ("Promise to Pay", "Engaged - Discussing Options"):
+        elif outcome in ("Promise to Pay", "Engaged - Discussing Options"):
             tone = "empathetic"
         else:
             tone = "friendly"
 
     # Select template based on tone and channel
-    channel = c["preferred_channel"]
     if tone == "sensitive":
         template_data = COMMS_TEMPLATES["vulnerability_sensitive"]
-    elif tone == "formal" and c["days_past_due"] > 90:
+    elif tone == "formal" and dpd > 90:
         template_data = COMMS_TEMPLATES["settlement_offer"]
     elif tone == "formal":
         template_data = COMMS_TEMPLATES["formal_notice"]
@@ -611,14 +620,14 @@ def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
         template_data = COMMS_TEMPLATES["soft_reminder_sms"]
 
     # Fill template
-    settlement_pct = 60 if c["days_past_due"] > 90 else 80
+    settlement_pct = 60 if dpd > 90 else 80
     filled = template_data["template"].format(
-        name=c["name"].split()[0],
-        product=c["product"],
-        amount=f"{c['outstanding_balance']:,.2f}",
-        days_past_due=c["days_past_due"],
+        name=name,
+        product=product,
+        amount=f"{balance:,.2f}",
+        days_past_due=dpd,
         payment_link="https://pay.oakbrook.co.uk/XXXXX",
-        settlement_amount=f"{c['outstanding_balance'] * (settlement_pct / 100):,.2f}",
+        settlement_amount=f"{balance * (settlement_pct / 100):,.2f}",
         discount=100 - settlement_pct,
     )
 
@@ -851,25 +860,26 @@ def score_best_time_to_contact(customer_id: str) -> dict | None:
 
 def _explain_score(c: dict, score: float, band: str) -> str:
     parts = []
-    if c["employment_status"].startswith("Employed"):
-        parts.append(f"employed ({c['employment_status']})")
+    emp = str(c.get("employment_status", ""))
+    if emp.startswith("Employed"):
+        parts.append(f"employed ({emp})")
     else:
-        parts.append(f"not currently employed ({c['employment_status']})")
+        parts.append(f"not currently employed ({emp})")
 
-    kept = c["payment_promises_kept"]
-    broken = c["payment_promises_broken"]
+    kept = int(c.get("payment_promises_kept", 0))
+    broken = int(c.get("payment_promises_broken", 0))
     if kept > broken:
         parts.append(f"positive promise history ({kept} kept vs {broken} broken)")
     elif broken > 0:
         parts.append(f"unreliable promise history ({broken} broken vs {kept} kept)")
 
-    if c["direct_debit_active"]:
+    if c.get("direct_debit_active"):
         parts.append("active direct debit")
-    elif c["direct_debit_cancelled_date"]:
+    elif c.get("direct_debit_cancelled_date"):
         parts.append(f"direct debit cancelled on {c['direct_debit_cancelled_date']}")
 
-    ob = OPEN_BANKING_DATA.get(c["customer_id"])
+    ob = get_open_banking_data(c.get("customer_id", ""))
     if ob:
-        parts.append(f"Open Banking shows £{ob['available_for_repayment']}/month available for repayment")
+        parts.append(f"Open Banking shows £{ob.get('available_for_repayment', 0)}/month available for repayment")
 
     return f"{band} propensity ({score:.0%}): Customer is {', '.join(parts)}."
