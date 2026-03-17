@@ -1227,6 +1227,51 @@
                     </p>
                 </div>
 
+                <h3>Known Gaps on GCP &amp; Alternatives</h3>
+                <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:24px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                        <tr style="border-bottom:2px solid var(--border);">
+                            <th style="text-align:left;padding:8px;">Gap</th>
+                            <th style="text-align:left;padding:8px;">Impact</th>
+                            <th style="text-align:left;padding:8px;">Alternative</th>
+                            <th style="text-align:left;padding:8px;">Timeline</th>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px;font-weight:600;">Feature Store Online Serving</td>
+                            <td style="padding:8px;">No sub-millisecond feature lookup at serving time on GCP</td>
+                            <td style="padding:8px;">Query UC Feature Tables via SQL at request time (~200ms). Acceptable for collections (not sub-second trading). Or use <b>Vertex AI Feature Store</b> for online serving if latency critical.</td>
+                            <td style="padding:8px;color:#744210;">No GCP date announced</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px;font-weight:600;">AgentBricks (KA/SA)</td>
+                            <td style="padding:8px;">No-code agent builder not available on GCP</td>
+                            <td style="padding:8px;">Use <b>FMAPI + custom tool-calling</b> (what this demo uses). Same pattern, just requires code. Or use <b>Vertex AI Agent Builder</b> if no-code is essential today.</td>
+                            <td style="padding:8px;color:#744210;">~May 2026 on GCP</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px;font-weight:600;">Vector Search for RAG</td>
+                            <td style="padding:8px;">GA on GCP, but this demo uses pure LLM for comms generation</td>
+                            <td style="padding:8px;">Add <b>Vector Search index</b> with approved communication templates when moving to production. LLM retrieves relevant template then personalises. Improves consistency and compliance.</td>
+                            <td style="padding:8px;color:#22543d;">Available now (GA)</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px;font-weight:600;">MLflow Tracing from Apps</td>
+                            <td style="padding:8px;">MLflow SDK tracing doesn't work natively in Databricks Apps (service principal auth)</td>
+                            <td style="padding:8px;">Use <b>REST API for trace logging</b> (what this demo does), or <b>register the agent as a served model</b> — Model Serving auto-generates traces. Best option: run agent in a <b>notebook job</b> where MLflow tracing works natively.</td>
+                            <td style="padding:8px;color:#744210;">Workaround available</td>
+                        </tr>
+                        <tr style="border-bottom:1px solid var(--border);">
+                            <td style="padding:8px;font-weight:600;">Databricks GCP Feature Lag</td>
+                            <td style="padding:8px;">New Databricks features arrive on GCP 3-6 months after AWS</td>
+                            <td style="padding:8px;">All core capabilities for this use case (FMAPI, Model Serving, MLflow 3.0, MCP Server, Apps) are <b>already GA on GCP</b>. Monitor the <b>Databricks release notes</b> for GCP-specific updates. Escalate blockers via your SA.</td>
+                            <td style="padding:8px;color:#718096;">Ongoing</td>
+                        </tr>
+                    </table>
+                    <p style="margin-top:12px;font-size:12px;color:#718096;">
+                        <b>Bottom line:</b> The gaps are real but none block the collections AI use case today. Feature Store online serving and AgentBricks are nice-to-haves, not blockers. The alternatives work now.
+                    </p>
+                </div>
+
                 <h3>Production Roadmap</h3>
                 <div class="roadmap">
                     <div class="roadmap-step">
