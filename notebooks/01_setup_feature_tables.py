@@ -65,21 +65,12 @@ print(f"Created {CATALOG}.{SCHEMA}.customer_360 with {df_customers.count()} rows
 
 # COMMAND ----------
 
-# Register as Feature Table
-from databricks.feature_engineering import FeatureEngineeringClient
-
-fe = FeatureEngineeringClient()
-
-# The table is already a Delta table — register it as a Feature Table with primary key
-try:
-    fe.register_table(
-        delta_table=f"{CATALOG}.{SCHEMA}.customer_360",
-        primary_keys=["customer_id"],
-        description="Oakbrook Collections Customer 360 — unified customer profile for collections AI agent",
-    )
-    print("Registered customer_360 as Feature Table")
-except Exception as e:
-    print(f"Feature Table registration: {e}")
+# Register as Feature Table by adding primary key constraint
+# This is the correct approach — ALTER TABLE with NOT NULL + PRIMARY KEY
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.customer_360 ALTER COLUMN customer_id SET NOT NULL")
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.customer_360 ADD CONSTRAINT customer_360_pk PRIMARY KEY(customer_id)")
+spark.sql(f"COMMENT ON TABLE {CATALOG}.{SCHEMA}.customer_360 IS 'Oakbrook Collections Customer 360 — unified customer profile for collections AI agent. Sources: IceNet/Oracle, Zendesk, ClearScore.'")
+print(f"✅ Registered {CATALOG}.{SCHEMA}.customer_360 as Feature Table with PRIMARY KEY(customer_id)")
 
 # COMMAND ----------
 
@@ -128,6 +119,14 @@ print(f"Created {CATALOG}.{SCHEMA}.payment_history with {df_payments.count()} ro
 
 # COMMAND ----------
 
+# Register payment_history with primary key
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.payment_history ALTER COLUMN customer_id SET NOT NULL")
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.payment_history ALTER COLUMN date SET NOT NULL")
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.payment_history ADD CONSTRAINT payment_history_pk PRIMARY KEY(customer_id, date)")
+print(f"✅ Registered {CATALOG}.{SCHEMA}.payment_history with PRIMARY KEY(customer_id, date)")
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ## 3. Open Banking Data Table
 
@@ -157,6 +156,13 @@ df_ob = spark.createDataFrame(ob_data, ob_schema)
 df_ob.write.mode("overwrite").saveAsTable(f"{CATALOG}.{SCHEMA}.open_banking_data")
 
 print(f"Created {CATALOG}.{SCHEMA}.open_banking_data with {df_ob.count()} rows")
+
+# COMMAND ----------
+
+# Register open_banking_data with primary key
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.open_banking_data ALTER COLUMN customer_id SET NOT NULL")
+spark.sql(f"ALTER TABLE {CATALOG}.{SCHEMA}.open_banking_data ADD CONSTRAINT open_banking_pk PRIMARY KEY(customer_id)")
+print(f"✅ Registered {CATALOG}.{SCHEMA}.open_banking_data with PRIMARY KEY(customer_id)")
 
 # COMMAND ----------
 
