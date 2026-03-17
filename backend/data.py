@@ -636,95 +636,216 @@ def generate_communication(customer_id: str, tone: str = "auto") -> dict | None:
     }
 
 
+_serving_token_cache = {"host": None, "token": None}
+
+
+def _get_serving_token():
+    """Get token for calling Model Serving endpoints. Uses same SDK auth as SQL connector."""
+    if _serving_token_cache["token"]:
+        return _serving_token_cache["host"], _serving_token_cache["token"]
+
+    # Reuse the SQL connection's auth approach
+    conn = _get_sql_connection()
+    if conn:
+        # If SQL connection works, we have a valid token — extract from the connection's config
+        host = os.environ.get("DATABRICKS_HOST", "").replace("https://", "").replace("http://", "")
+        try:
+            from databricks.sdk import WorkspaceClient
+            w = WorkspaceClient(host=f"https://{host}")
+            sdk_token = None
+            if hasattr(w.config, 'token') and w.config.token:
+                sdk_token = w.config.token
+            else:
+                auth_result = w.config.authenticate()
+                if callable(auth_result):
+                    headers = auth_result()
+                elif isinstance(auth_result, dict):
+                    headers = auth_result
+                else:
+                    headers = {}
+                auth_header = headers.get("Authorization", "")
+                sdk_token = auth_header.replace("Bearer ", "") if auth_header else ""
+            if sdk_token:
+                _serving_token_cache["host"] = host
+                _serving_token_cache["token"] = sdk_token
+                return host, sdk_token
+        except Exception as e:
+            logger.warning(f"Failed to get serving token: {e}")
+
+    return None, None
+
+
+def _call_serving_endpoint(endpoint_name: str, features: dict) -> dict | None:
+    """Call a Model Serving endpoint and return the prediction."""
+    try:
+        import requests
+    except ImportError:
+        return None
+
+    host, token = _get_serving_token()
+    if not host or not token:
+        logger.info(f"No serving token available for {endpoint_name}")
+        return None
+    try:
+        response = requests.post(
+            f"https://{host}/serving-endpoints/{endpoint_name}/invocations",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"dataframe_records": [features]},
+            timeout=10,
+        )
+        if response.status_code == 200:
+            logger.info(f"Serving endpoint {endpoint_name}: {response.status_code}")
+            return response.json()
+        else:
+            logger.warning(f"Serving endpoint {endpoint_name}: {response.status_code} {response.text[:200]}")
+    except Exception as e:
+        logger.warning(f"Serving endpoint {endpoint_name} call failed: {e}")
+    return None
+
+
 def score_propensity_to_pay(customer_id: str) -> dict | None:
     """
-    Simulates an MLflow Model Serving endpoint for propensity-to-pay.
-    In production this would call a registered MLflow model via Model Serving.
+    Call the Propensity-to-Pay Model Serving endpoint (oakbrook-ptp-model).
+    Falls back to local heuristic scoring if endpoint is unavailable.
     """
-    c = CUSTOMERS.get(customer_id)
+    c = get_customer(customer_id)
     if not c:
         return None
 
+    # Feature vector matching the trained model schema
+    features = {
+        "credit_limit": float(c.get("credit_limit", 0)),
+        "outstanding_balance": float(c.get("outstanding_balance", 0)),
+        "months_in_arrears": int(c.get("months_in_arrears", 0)),
+        "days_past_due": int(c.get("days_past_due", 0)),
+        "monthly_income": float(c.get("monthly_income", 0)),
+        "contact_attempts_30d": int(c.get("contact_attempts_30d", 0)),
+        "payment_promises_broken": int(c.get("payment_promises_broken", 0)),
+        "payment_promises_kept": int(c.get("payment_promises_kept", 0)),
+        "age": int(c.get("age", 30)),
+    }
+
+    # Try real Model Serving endpoint
+    result = _call_serving_endpoint("oakbrook-ptp-model", features)
+    if result and "predictions" in result:
+        prediction = result["predictions"][0]
+        # Model returns 0 or 1; convert to score
+        score = float(prediction) if isinstance(prediction, (int, float)) else 0.5
+        # If model returns probability array, use positive class
+        if isinstance(prediction, list):
+            score = float(prediction[1]) if len(prediction) > 1 else float(prediction[0])
+
+        if score >= 0.65:
+            band = "High"
+        elif score >= 0.4:
+            band = "Medium"
+        else:
+            band = "Low"
+
+        return {
+            "customer_id": customer_id,
+            "propensity_to_pay_score": round(score, 2),
+            "band": band,
+            "model_version": "ptp-v3.2.1",
+            "served_via": "Model Serving endpoint (oakbrook-ptp-model)",
+            "features_used": list(features.keys()),
+            "feature_count": len(features),
+            "explanation": _explain_score(c, score, band),
+        }
+
+    # Fallback: local heuristic scoring
+    logger.info(f"PTP: falling back to local scoring for {customer_id}")
+    return _score_ptp_local(c)
+
+
+def _score_ptp_local(c: dict) -> dict:
+    """Local heuristic fallback when Model Serving is unavailable."""
     score = 0.5
-    if c["employment_status"].startswith("Employed"):
+    emp = c.get("employment_status", "")
+    if emp.startswith("Employed"):
         score += 0.15
-    if c["payment_promises_kept"] > c["payment_promises_broken"]:
+    if c.get("payment_promises_kept", 0) > c.get("payment_promises_broken", 0):
         score += 0.1
-    if c["open_banking_connected"]:
+    if c.get("open_banking_connected"):
         score += 0.05
-    if c["direct_debit_active"]:
+    if c.get("direct_debit_active"):
         score += 0.1
-    if c["months_in_arrears"] >= 3:
+    if c.get("months_in_arrears", 0) >= 3:
         score -= 0.2
-    if c["months_in_arrears"] >= 4:
+    if c.get("months_in_arrears", 0) >= 4:
         score -= 0.15
-    if c["last_contact_outcome"] in ("Promise to Pay", "Engaged - Discussing Options"):
+    if c.get("last_contact_outcome") in ("Promise to Pay", "Engaged - Discussing Options"):
         score += 0.1
-    if c["last_contact_outcome"] == "Refused to Engage":
+    if c.get("last_contact_outcome") == "Refused to Engage":
         score -= 0.15
-
-    # Open Banking boost
-    ob = OPEN_BANKING_DATA.get(customer_id)
-    if ob:
-        if ob["available_for_repayment"] > 200:
-            score += 0.1
-        elif ob["available_for_repayment"] < 50:
-            score -= 0.1
-
     score = max(0.05, min(0.95, score))
-
-    if score >= 0.65:
-        band = "High"
-    elif score >= 0.4:
-        band = "Medium"
-    else:
-        band = "Low"
-
-    features_used = [
-        "employment_status", "payment_history", "direct_debit_status",
-        "arrears_depth", "contact_outcome",
-    ]
-    if ob:
-        features_used.extend(["open_banking_disposable_income", "open_banking_stability"])
-
+    band = "High" if score >= 0.65 else "Medium" if score >= 0.4 else "Low"
     return {
-        "customer_id": customer_id,
+        "customer_id": c.get("customer_id", ""),
         "propensity_to_pay_score": round(score, 2),
         "band": band,
-        "model_version": "ptp-v3.2.1",
-        "served_via": "MLflow Model Serving (Feature Table lookup + real-time scoring)",
-        "features_used": features_used,
-        "feature_count": len(features_used),
+        "model_version": "ptp-v3.2.1 (local fallback)",
+        "served_via": "Local heuristic (Model Serving unavailable)",
+        "features_used": ["employment_status", "payment_history", "dd_status", "arrears", "contact_outcome"],
+        "feature_count": 5,
         "explanation": _explain_score(c, score, band),
     }
 
 
 def score_best_time_to_contact(customer_id: str) -> dict | None:
     """
-    Simulates an MLflow Model Serving endpoint for best-time-to-contact.
+    Call the Best-Time-to-Contact Model Serving endpoint (oakbrook-btc-model).
+    Falls back to schedule lookup if endpoint is unavailable.
     """
-    c = CUSTOMERS.get(customer_id)
+    c = get_customer(customer_id)
     if not c:
         return None
 
-    schedules = {
-        "Employed - Full Time": {"best_time": "18:00-19:30", "best_day": "Tuesday", "reason": "After work hours, early week engagement"},
-        "Employed - Part Time": {"best_time": "10:00-11:30", "best_day": "Wednesday", "reason": "Mid-morning on typical non-working day"},
-        "Self Employed": {"best_time": "12:00-13:00", "best_day": "Thursday", "reason": "Lunch break, late-week urgency"},
-        "Unemployed": {"best_time": "10:00-11:00", "best_day": "Monday", "reason": "Morning availability, start-of-week motivation"},
+    # Employment encoding matching trained model
+    employment_map = {
+        "Employed - Full Time": 0,
+        "Employed - Part Time": 1,
+        "Self Employed": 2,
+        "Unemployed": 3,
+    }
+    emp_encoded = employment_map.get(c.get("employment_status", ""), 3)
+
+    features = {
+        "employment_encoded": emp_encoded,
+        "contact_attempts_30d": int(c.get("contact_attempts_30d", 0)),
+        "age": int(c.get("age", 30)),
+        "days_past_due": int(c.get("days_past_due", 0)),
     }
 
-    schedule = schedules.get(c["employment_status"], schedules["Unemployed"])
+    # Decode prediction back to schedule
+    schedules = {
+        0: {"best_time": "18:00-19:30", "best_day": "Tuesday", "reason": "After work hours, early week engagement"},
+        1: {"best_time": "10:00-11:30", "best_day": "Wednesday", "reason": "Mid-morning on typical non-working day"},
+        2: {"best_time": "12:00-13:00", "best_day": "Thursday", "reason": "Lunch break, late-week urgency"},
+        3: {"best_time": "10:00-11:00", "best_day": "Monday", "reason": "Morning availability, start-of-week motivation"},
+    }
+
+    # Try real Model Serving endpoint
+    result = _call_serving_endpoint("oakbrook-btc-model", features)
+    if result and "predictions" in result:
+        prediction = int(result["predictions"][0])
+        schedule = schedules.get(prediction, schedules[3])
+        served_via = "Model Serving endpoint (oakbrook-btc-model)"
+    else:
+        # Fallback
+        logger.info(f"BTC: falling back to local scoring for {customer_id}")
+        schedule = schedules.get(emp_encoded, schedules[3])
+        served_via = "Local schedule lookup (Model Serving unavailable)"
 
     return {
         "customer_id": customer_id,
         "best_time": schedule["best_time"],
         "best_day": schedule["best_day"],
         "reason": schedule["reason"],
-        "preferred_channel": c["preferred_channel"],
-        "contact_attempts_30d": c["contact_attempts_30d"],
+        "preferred_channel": c.get("preferred_channel", "SMS"),
+        "contact_attempts_30d": c.get("contact_attempts_30d", 0),
         "model_version": "btc-v2.1.0",
-        "served_via": "MLflow Model Serving (behavioural pattern analysis)",
+        "served_via": served_via,
     }
 
 

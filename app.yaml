@@ -17,3 +17,11 @@ resources:
     serving_endpoint:
       name: databricks-claude-sonnet-4-6
       permission: CAN_QUERY
+  - name: ptp_model
+    serving_endpoint:
+      name: oakbrook-ptp-model
+      permission: CAN_QUERY
+  - name: btc_model
+    serving_endpoint:
+      name: oakbrook-btc-model
+      permission: CAN_QUERY
