@@ -33,6 +33,34 @@ memory = ConversationMemory()
 # Individual tool endpoints (for step-by-step workbench UI)
 # ---------------------------------------------------------------------------
 
+try:
+    import mlflow
+    from mlflow.entities import SpanType
+    mlflow.set_experiment("/Shared/oakbrook-collections-brain")
+    MLFLOW_AVAILABLE = True
+except Exception:
+    MLFLOW_AVAILABLE = False
+
+
+def _trace(name: str, span_type=None, inputs=None):
+    """Context manager that wraps a call in an MLflow trace span."""
+    class _NoOpCtx:
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def set_inputs(self, v): pass
+        def set_outputs(self, v): pass
+
+    if not MLFLOW_AVAILABLE:
+        return _NoOpCtx()
+    try:
+        span = mlflow.start_span(name=name, span_type=span_type or SpanType.TOOL)
+        if inputs:
+            span.set_inputs(inputs)
+        return span
+    except Exception:
+        return _NoOpCtx()
+
+
 @app.get("/api/customers")
 async def list_customers():
     return get_all_customers()
@@ -40,66 +68,82 @@ async def list_customers():
 
 @app.get("/api/customers/{customer_id}")
 async def get_customer_detail(customer_id: str):
-    c = get_customer(customer_id)
-    if not c:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return c
+    with _trace("lookup_customer", inputs={"customer_id": customer_id}) as span:
+        c = get_customer(customer_id)
+        if not c:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"name": c.get("name"), "source": c.get("_source", "local")})
+        return c
 
 
 @app.get("/api/customers/{customer_id}/payments")
 async def get_customer_payments(customer_id: str):
-    result = get_payment_history(customer_id)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "No payment history"})
-    return result
+    with _trace("get_payment_history", inputs={"customer_id": customer_id}) as span:
+        result = get_payment_history(customer_id)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "No payment history"})
+        span.set_outputs({"count": len(result)})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/ptp")
 async def get_customer_ptp(customer_id: str):
-    result = score_propensity_to_pay(customer_id)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return result
+    with _trace("score_propensity_to_pay", span_type=SpanType.LLM if MLFLOW_AVAILABLE else None, inputs={"customer_id": customer_id}) as span:
+        result = score_propensity_to_pay(customer_id)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"score": result.get("propensity_to_pay_score"), "band": result.get("band"), "served_via": result.get("served_via")})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/btc")
 async def get_customer_btc(customer_id: str):
-    result = score_best_time_to_contact(customer_id)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return result
+    with _trace("score_best_time_to_contact", span_type=SpanType.LLM if MLFLOW_AVAILABLE else None, inputs={"customer_id": customer_id}) as span:
+        result = score_best_time_to_contact(customer_id)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"day": result.get("best_day"), "time": result.get("best_time"), "served_via": result.get("served_via")})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/open-banking")
 async def get_customer_ob(customer_id: str):
-    result = get_open_banking_data(customer_id)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "No Open Banking data — customer has not consented"})
-    return result
+    with _trace("get_open_banking_data", inputs={"customer_id": customer_id}) as span:
+        result = get_open_banking_data(customer_id)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "No Open Banking data — customer has not consented"})
+        span.set_outputs({"available_for_repayment": result.get("available_for_repayment")})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/vulnerability")
 async def get_customer_vulnerability(customer_id: str):
-    result = assess_vulnerability(customer_id)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return result
+    with _trace("assess_vulnerability", span_type=SpanType.LLM if MLFLOW_AVAILABLE else None, inputs={"customer_id": customer_id}) as span:
+        result = assess_vulnerability(customer_id)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"risk_level": result.get("vulnerability_risk_level", result.get("risk_level")), "source": result.get("source")})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/scorecard")
 async def get_customer_scorecard(customer_id: str, propensity_band: str = "Medium"):
-    result = get_scorecard_segment(customer_id, propensity_band)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return result
+    with _trace("get_scorecard_segment", inputs={"customer_id": customer_id, "propensity_band": propensity_band}) as span:
+        result = get_scorecard_segment(customer_id, propensity_band)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"segment": result.get("assigned_segment"), "strategy": result.get("strategy"), "source": result.get("source")})
+        return result
 
 
 @app.get("/api/customers/{customer_id}/communication")
 async def get_customer_comms(customer_id: str, tone: str = "auto"):
-    result = generate_communication(customer_id, tone)
-    if not result:
-        return JSONResponse(status_code=404, content={"error": "Customer not found"})
-    return result
+    with _trace("generate_communication", span_type=SpanType.LLM if MLFLOW_AVAILABLE else None, inputs={"customer_id": customer_id, "tone": tone}) as span:
+        result = generate_communication(customer_id, tone)
+        if not result:
+            return JSONResponse(status_code=404, content={"error": "Customer not found"})
+        span.set_outputs({"channel": result.get("channel"), "tone": result.get("tone"), "source": result.get("source")})
+        return result
 
 
 # ---------------------------------------------------------------------------
