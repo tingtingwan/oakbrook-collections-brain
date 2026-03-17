@@ -764,8 +764,18 @@
                 <div class="workbench-empty" id="workbenchEmpty">
                     <h2>Collections Workbench</h2>
                     <p>Select a customer from the portfolio to begin analysis. Each section loads independently — you control the pace.</p>
-                    <p style="font-size:12px;color:#a0aec0;margin-top:12px;">
-                        Feature Tables &bull; MLflow Model Serving &bull; MCP Server &bull; RAG Vector Search &bull; UC Governance
+                    <div style="display:flex;gap:16px;margin-top:24px;text-align:left;max-width:700px;">
+                        <div style="flex:1;padding:16px;background:#ebf8ff;border-radius:8px;border-left:4px solid #3182ce;">
+                            <strong style="color:#1a365d;">Workbench</strong>
+                            <p style="font-size:12px;color:#4a5568;margin-top:4px;line-height:1.5;">For daily collections work. Step-by-step analysis with full control — run each model independently, review results, then decide on action. Every step is auditable and goes through approval before reaching the customer.</p>
+                        </div>
+                        <div style="flex:1;padding:16px;background:#f0fdf4;border-radius:8px;border-left:4px solid #38a169;">
+                            <strong style="color:#1a365d;">Agent Chat</strong>
+                            <p style="font-size:12px;color:#4a5568;margin-top:4px;line-height:1.5;">For portfolio analysis and ad-hoc questions. Ask the AI agent to prioritise customers, compare strategies, or generate contact plans across the whole portfolio. The agent orchestrates all tools automatically.</p>
+                        </div>
+                    </div>
+                    <p style="font-size:12px;color:#a0aec0;margin-top:16px;">
+                        Feature Tables &bull; MLflow Model Serving &bull; MCP Server &bull; FMAPI &bull; UC Governance
                     </p>
                 </div>
                 <div id="workbenchActive" style="display:none;">
@@ -968,8 +978,8 @@
                     <div style="font-family: monospace;">
                         <strong>4. Feature Tables</strong> &rarr; Materialise Customer 360 from Gold + ClearScore Open Banking API &rarr; Unity Catalog Feature Tables<br>
                         <strong>5. Train + Deploy</strong> &rarr; Propensity-to-Pay + Best-Time-to-Contact models &rarr; MLflow experiment tracking &rarr; MLflow Model Registry &rarr; Model Serving endpoints<br>
-                        <strong>6. Score</strong> &rarr; Real-time inference via Model Serving with Feature Table auto-lookup (~1,000 features)<br>
-                        <strong>7. Orchestrate</strong> &rarr; AI Agent (Claude Sonnet via FMAPI) calls: ML models + MCP scorecard + vulnerability engine + RAG comms generator<br>
+                        <strong>6. Score</strong> &rarr; Real-time inference via Model Serving endpoints (Feature Table auto-lookup not yet on GCP — use SQL query at request time)<br>
+                        <strong>7. Orchestrate</strong> &rarr; AI Agent (Claude Sonnet via FMAPI) calls: ML models + MCP scorecard + LLM vulnerability + LLM comms<br>
                         <strong>8. Approve</strong> &rarr; Generated comms submitted to UC Delta approval queue &rarr; Manager reviews &rarr; Approved comms sent to WhatsApp/SMS/Email<br>
                         <strong>9. Trace</strong> &rarr; Every agent decision logged in MLflow 3.0 (replaces Langfuse) &rarr; FCA audit trail with model versions
                     </div>
@@ -995,7 +1005,7 @@
                             <span class="comp-title">Propensity-to-Pay Model</span>
                         </div>
                         <div class="comp-tool">Tool: score_propensity_to_pay &rarr; MLflow Model Serving</div>
-                        <div class="comp-desc">ML model scoring likelihood of payment using ~1,000 features (employment, payment history, Open Banking data). Served in real-time via Model Serving with Feature Table auto-lookup.</div>
+                        <div class="comp-desc">ML model scoring likelihood of payment using ~1,000 features (employment, payment history, Open Banking data). Served in real-time via Model Serving endpoints. Note: Feature Table auto-lookup (online serving) not yet on GCP — features queried via SQL at request time.</div>
                         <a class="comp-link" href="https://docs.databricks.com/gcp/en/machine-learning/model-serving/create-manage-serving-endpoints" target="_blank">Model Serving Docs</a>
                         <a class="comp-link" href="https://docs.databricks.com/gcp/en/mlflow/index.html" target="_blank">MLflow on Databricks</a>
                         <a class="comp-link" href="https://docs.databricks.com/gcp/en/machine-learning/feature-store/uc/feature-tables-uc" target="_blank">Feature Engineering</a>
@@ -1244,21 +1254,21 @@
                         <div class="roadmap-num">4</div>
                         <div class="roadmap-text">
                             <strong>Model Serving</strong>
-                            <span>Deploy models to real-time Model Serving endpoints with Feature Table auto-lookup. Set up A/B testing between model versions.</span>
+                            <span>Deploy models to real-time Model Serving endpoints. Note: Feature Table auto-lookup (online serving) is not yet available on GCP — use SQL query at request time instead. Traffic splitting for model version comparison is available.</span>
                         </div>
                     </div>
                     <div class="roadmap-step">
                         <div class="roadmap-num">5</div>
                         <div class="roadmap-text">
                             <strong>Agent Orchestration</strong>
-                            <span>Build Multi-Agent Supervisor using Agent Framework. Wire up MCP Server for scorecard, Vector Search for RAG comms templates. Enable MLflow 3.0 tracing for full audit trail.</span>
+                            <span>Build agent using FMAPI + tool-calling. Wire up MCP Server for scorecard (UC SQL function). Use LLM for personalised comms (add Vector Search for template retrieval when needed). Enable MLflow 3.0 tracing for full audit trail.</span>
                         </div>
                     </div>
                     <div class="roadmap-step">
                         <div class="roadmap-num">6</div>
                         <div class="roadmap-text">
                             <strong>Production App</strong>
-                            <span>Deploy as a Databricks App with workspace SSO. Integrate with existing MSFT Agent / comms channels for WhatsApp, SMS, and email delivery. Target: >20% Cure/Roll uplift, 70hr/month automation savings.</span>
+                            <span>Deploy as a Databricks App with workspace SSO. Integrate with WhatsApp Business API for outreach delivery. UC-governed approval queue for human-in-the-loop. Target: >20% Cure/Roll uplift, 70hr/month automation savings.</span>
                         </div>
                     </div>
                 </div>
