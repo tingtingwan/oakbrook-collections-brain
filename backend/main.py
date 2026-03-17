@@ -230,6 +230,11 @@ async def debug():
     return {"DATABRICKS_HOST": host, "DATABRICKS_TOKEN": "SET" if token != "NOT SET" else "NOT SET", "LAKEBASE_STATUS": memory.status(), "APPROVALS_COUNT": len(approval_queue)}
 
 
+@app.get("/oakbrook-logo.png")
+async def serve_logo():
+    return FileResponse(FRONTEND_DIR / "oakbrook-logo.png", media_type="image/png")
+
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     return FileResponse(FRONTEND_DIR / "index.html")
