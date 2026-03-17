@@ -1,12 +1,8 @@
 """
-Conversation memory backed by Lakebase (Databricks-managed PostgreSQL).
+Conversation memory backed by PostgreSQL (Cloud SQL on GCP).
 
-In production, this stores:
-- Session history for multi-turn conversations
-- Agent decision audit log
-- Customer interaction records for compliance
-
-Falls back to in-memory storage when Lakebase is not configured.
+Stores session history for multi-turn conversations and audit logging.
+Falls back to in-memory storage when PostgreSQL is not configured.
 """
 
 import os
@@ -17,30 +13,28 @@ from typing import Optional
 
 class ConversationMemory:
     """
-    Agent memory with Lakebase (PostgreSQL) backend.
+    Agent memory with PostgreSQL backend.
 
-    Lakebase provides:
+    Provides:
     - Persistent conversation history across sessions
     - Low-latency reads for agent context retrieval
     - PostgreSQL compatibility for familiar querying
-    - Fully managed — no infrastructure to maintain
-    - Unity Catalog governed — access control and audit
     """
 
     def __init__(self):
         self._pg_conn = None
         self._fallback: dict[str, list[dict]] = {}
-        self._lakebase_url = os.environ.get("LAKEBASE_URL", "")
+        self._pg_url = os.environ.get("POSTGRES_URL", "")
         self._init_db()
 
     def _init_db(self):
-        """Try to connect to Lakebase; fall back to in-memory if unavailable."""
-        if not self._lakebase_url:
+        """Try to connect to PostgreSQL; fall back to in-memory if unavailable."""
+        if not self._pg_url:
             return
 
         try:
             import psycopg2
-            self._pg_conn = psycopg2.connect(self._lakebase_url)
+            self._pg_conn = psycopg2.connect(self._pg_url)
             self._pg_conn.autocommit = True
             with self._pg_conn.cursor() as cur:
                 cur.execute("""
@@ -61,10 +55,10 @@ class ConversationMemory:
 
     def status(self) -> str:
         if self._pg_conn:
-            return "Lakebase (PostgreSQL) connected"
-        if self._lakebase_url:
-            return f"Lakebase configured but connection failed ({self._lakebase_url[:30]}...)"
-        return "In-memory (set LAKEBASE_URL for Lakebase persistence)"
+            return "PostgreSQL connected"
+        if self._pg_url:
+            return f"PostgreSQL configured but connection failed"
+        return "In-memory (set POSTGRES_URL for persistence)"
 
     def save_message(self, session_id: str, role: str, content: str):
         """Save a message to conversation history."""
@@ -79,7 +73,6 @@ class ConversationMemory:
             except Exception:
                 pass
 
-        # Fallback: in-memory
         if session_id not in self._fallback:
             self._fallback[session_id] = []
         self._fallback[session_id].append({
@@ -103,7 +96,6 @@ class ConversationMemory:
             except Exception:
                 pass
 
-        # Fallback
         return self._fallback.get(session_id, [])[-limit:]
 
     def clear_history(self, session_id: str):

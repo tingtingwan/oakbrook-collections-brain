@@ -1,10 +1,9 @@
 """
 Approval queue backed by Unity Catalog Delta table.
 
-In production this would be Lakebase (PostgreSQL) — but since Lakebase
-isn't on GCP yet, we use a UC Delta table via SQL connector.
-This demonstrates the same governance pattern: approvals are governed
-in Unity Catalog with lineage, access control, and audit trail.
+Approval queue backed by a UC Delta table via SQL connector.
+Approvals are governed in Unity Catalog with lineage, access control,
+and audit trail.
 
 Table: main.oakbrook_collections.approval_queue
 """

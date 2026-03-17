@@ -765,7 +765,7 @@
                     <h2>Collections Workbench</h2>
                     <p>Select a customer from the portfolio to begin analysis. Each section loads independently — you control the pace.</p>
                     <p style="font-size:12px;color:#a0aec0;margin-top:12px;">
-                        Feature Tables &bull; MLflow Model Serving &bull; MCP Server &bull; RAG Vector Search &bull; Lakebase
+                        Feature Tables &bull; MLflow Model Serving &bull; MCP Server &bull; RAG Vector Search &bull; UC Governance
                     </p>
                 </div>
                 <div id="workbenchActive" style="display:none;">
@@ -894,7 +894,7 @@
                         <h2>Approval Queue</h2>
                         <p style="color:var(--text-light);font-size:13px;margin-top:4px;">Human-in-the-loop review before sending communications to customers.</p>
                     </div>
-                    <span class="source-badge badge-lakebase" style="font-size:13px;padding:6px 14px;">Powered by Lakebase (PostgreSQL)</span>
+                    <span class="source-badge badge-govern" style="font-size:13px;padding:6px 14px;">Powered by Unity Catalog (Delta Table)</span>
                 </div>
                 <div id="approvalTableContainer">
                     <table class="data-table" id="approvalTable">
@@ -1109,8 +1109,8 @@
                             <span class="comp-title">Agent Memory (PostgreSQL)</span>
                         </div>
                         <div class="comp-tool">Conversation history &rarr; PostgreSQL / Cloud SQL</div>
-                        <div class="comp-desc">Persistent conversation memory for multi-turn conversations and audit logging. On GCP, use Cloud SQL (PostgreSQL) or any managed PostgreSQL. <b>Lakebase</b> (Databricks-managed PostgreSQL) is coming to GCP in H2 FY27 — currently AWS-only.</div>
-                        <a class="comp-link" href="https://docs.databricks.com/gcp/en/database/lakebase/" target="_blank">Lakebase (AWS, coming GCP)</a>
+                        <div class="comp-desc">Persistent conversation memory for multi-turn conversations and audit logging. On GCP, use Cloud SQL (PostgreSQL) or any managed PostgreSQL for session persistence.</div>
+                        <a class="comp-link" href="https://cloud.google.com/sql/docs/postgres" target="_blank">Cloud SQL (PostgreSQL)</a>
                     </div>
                     <div class="component-card cat-app">
                         <div class="comp-header">
@@ -1199,11 +1199,6 @@
                             <td style="padding:8px;font-weight:600;">AgentBricks (KA/SA)</td>
                             <td style="padding:8px;color:#744210;font-weight:600;">Coming ~May 2026</td>
                             <td style="padding:8px;">No-code agent builder — not on GCP yet. Use FMAPI + custom tools today.</td>
-                        </tr>
-                        <tr style="border-bottom:1px solid var(--border);background:#fefcbf;">
-                            <td style="padding:8px;font-weight:600;">Lakebase</td>
-                            <td style="padding:8px;color:#744210;font-weight:600;">Coming H2 FY27</td>
-                            <td style="padding:8px;">AWS-only today. Use Cloud SQL (PostgreSQL) on GCP for now.</td>
                         </tr>
                     </table>
                     <p style="margin-top:12px;font-size:12px;color:#718096;">

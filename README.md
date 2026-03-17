@@ -18,7 +18,7 @@ This demo showcases how Databricks capabilities on **GCP europe-west2** combine 
 | Vulnerability Screening | **FCA Consumer Duty** | Automated vulnerability assessment before any escalation action |
 | Agent Orchestration | **FMAPI + Tool-Calling** | Claude Sonnet 4.6 orchestrates all tools via streaming tool-calling loop |
 | Audit Trail | **MLflow 3.0 Tracing** | Real spans emitted for every agent decision — replaces Langfuse |
-| Agent Memory | **PostgreSQL** (Cloud SQL / Lakebase when available) | Persistent conversation history across sessions |
+| Agent Memory | **PostgreSQL** (Cloud SQL) | Persistent conversation history across sessions |
 | Output Channels | **WhatsApp / SMS / Email** | Generated comms delivered via WhatsApp Business API (primary) |
 
 ## Architecture
@@ -78,7 +78,6 @@ All core capabilities are **now available** in Oakbrook's region:
 | Lakeflow Connect | **GA** | Oracle CDC, SQL Server — key for loan migration |
 | Feature Tables (UC) | **GA** | Customer 360 Feature Table |
 | AgentBricks (KA/SA) | Coming ~May 2026 | No-code agent builder. Use FMAPI + custom tools today. |
-| Lakebase | Coming H2 FY27 | AWS-only today. Use Cloud SQL (PostgreSQL) on GCP. |
 
 **Previous blockers resolved:** Model Serving and FMAPI — which blocked the Customer Service Agent and Credit Decisioning UCOs — are now fully available.
 
@@ -192,4 +191,4 @@ To move from demo to production, Oakbrook would:
 3. **Model Training** — Train propensity-to-pay and best-time-to-contact using MLflow experiment tracking. Register in MLflow Model Registry.
 4. **Model Serving** — Deploy to real-time Model Serving endpoints with Feature Table auto-lookup. A/B testing between versions.
 5. **Agent + Observability** — Build custom agent using FMAPI + tool-calling. MCP Server for scorecard. Vector Search for RAG comms. MLflow 3.0 tracing for full FCA audit trail (replaces Langfuse).
-6. **Production App** — Databricks App with workspace SSO. WhatsApp Business API for outreach delivery. Cloud SQL for agent memory. Target: >20% Cure/Roll uplift, 70hr/month automation savings.
+6. **Production App** — Databricks App with workspace SSO. WhatsApp Business API for outreach delivery. Cloud SQL for session memory. Target: >20% Cure/Roll uplift, 70hr/month automation savings.

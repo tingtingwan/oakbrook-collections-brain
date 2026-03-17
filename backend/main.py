@@ -103,7 +103,7 @@ async def get_customer_comms(customer_id: str, tone: str = "auto"):
 
 
 # ---------------------------------------------------------------------------
-# Approval queue (Lakebase layer — human-in-the-loop)
+# Approval queue (UC Delta table — human-in-the-loop)
 # ---------------------------------------------------------------------------
 
 class ApprovalRequest(BaseModel):
