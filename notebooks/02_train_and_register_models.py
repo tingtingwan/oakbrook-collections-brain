@@ -245,6 +245,205 @@ with mlflow.start_run(
 # COMMAND ----------
 
 # MAGIC %md
+# MAGIC ## Step 4b: Offline Model Evaluation
+# MAGIC
+# MAGIC Evaluate the Propensity-to-Pay model with:
+# MAGIC - Train/test split (80/20) on the 100 training customers
+# MAGIC - Classification report, confusion matrix, ROC curve
+# MAGIC - Held-out evaluation dataset (30 unseen customers)
+
+# COMMAND ----------
+
+from sklearn.metrics import (
+    classification_report, confusion_matrix, roc_curve, auc,
+    precision_score, recall_score, f1_score
+)
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import tempfile
+import os
+
+# --- 4b.1: Train/Test Split Evaluation on Training Data ---
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+with mlflow.start_run(
+    run_name="ptp_offline_evaluation",
+    tags={
+        "team": "collections",
+        "use_case": "propensity_to_pay",
+        "evaluation_type": "offline",
+        "fca_regulated": "true",
+    },
+    description="Offline evaluation of Propensity-to-Pay model. Includes train/test split metrics, confusion matrix, ROC curve, and held-out evaluation dataset scoring.",
+) as eval_run:
+
+    # Retrain on training split
+    eval_model = GradientBoostingClassifier(n_estimators=100, max_depth=3, random_state=42)
+    eval_model.fit(X_train, y_train)
+
+    y_test_pred = eval_model.predict(X_test)
+    y_test_proba = eval_model.predict_proba(X_test)[:, 1]
+
+    # Classification report
+    report = classification_report(y_test, y_test_pred, target_names=["Won't Pay", "Will Pay"])
+    print("=== Classification Report (80/20 Split) ===")
+    print(report)
+
+    # Log split metrics
+    test_accuracy = accuracy_score(y_test, y_test_pred)
+    test_precision = precision_score(y_test, y_test_pred, zero_division=0)
+    test_recall = recall_score(y_test, y_test_pred, zero_division=0)
+    test_f1 = f1_score(y_test, y_test_pred, zero_division=0)
+    test_roc_auc = roc_auc_score(y_test, y_test_proba) if len(set(y_test)) > 1 else 0.0
+
+    mlflow.log_params({
+        "split_ratio": "80/20",
+        "train_samples": len(y_train),
+        "test_samples": len(y_test),
+        "model_type": "GradientBoosting",
+        "n_estimators": 100,
+        "max_depth": 3,
+    })
+
+    mlflow.log_metrics({
+        "test_accuracy": test_accuracy,
+        "test_precision": test_precision,
+        "test_recall": test_recall,
+        "test_f1": test_f1,
+        "test_roc_auc": test_roc_auc,
+        "train_accuracy": accuracy_score(y_train, eval_model.predict(X_train)),
+    })
+
+    print(f"\nTest Accuracy:  {test_accuracy:.3f}")
+    print(f"Test Precision: {test_precision:.3f}")
+    print(f"Test Recall:    {test_recall:.3f}")
+    print(f"Test F1:        {test_f1:.3f}")
+    print(f"Test ROC AUC:   {test_roc_auc:.3f}")
+
+    # --- Confusion Matrix artifact ---
+    cm = confusion_matrix(y_test, y_test_pred)
+    fig_cm, ax_cm = plt.subplots(figsize=(6, 5))
+    im = ax_cm.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)
+    ax_cm.set_title("Confusion Matrix — Propensity to Pay (Test Set)")
+    plt.colorbar(im, ax=ax_cm)
+    tick_marks = [0, 1]
+    ax_cm.set_xticks(tick_marks)
+    ax_cm.set_xticklabels(["Won't Pay", "Will Pay"])
+    ax_cm.set_yticks(tick_marks)
+    ax_cm.set_yticklabels(["Won't Pay", "Will Pay"])
+    ax_cm.set_ylabel("Actual")
+    ax_cm.set_xlabel("Predicted")
+    # Annotate cells
+    for i in range(2):
+        for j in range(2):
+            ax_cm.text(j, i, str(cm[i, j]), ha="center", va="center",
+                       color="white" if cm[i, j] > cm.max() / 2 else "black", fontsize=16)
+    plt.tight_layout()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cm_path = os.path.join(tmpdir, "confusion_matrix.png")
+        fig_cm.savefig(cm_path, dpi=150)
+        mlflow.log_artifact(cm_path, "evaluation_plots")
+    plt.close(fig_cm)
+    print("Logged confusion matrix artifact")
+
+    # --- ROC Curve artifact ---
+    if len(set(y_test)) > 1:
+        fpr, tpr, thresholds = roc_curve(y_test, y_test_proba)
+        roc_auc_val = auc(fpr, tpr)
+
+        fig_roc, ax_roc = plt.subplots(figsize=(7, 5))
+        ax_roc.plot(fpr, tpr, color="darkorange", lw=2, label=f"ROC curve (AUC = {roc_auc_val:.3f})")
+        ax_roc.plot([0, 1], [0, 1], color="navy", lw=1, linestyle="--", label="Random baseline")
+        ax_roc.set_xlim([0.0, 1.0])
+        ax_roc.set_ylim([0.0, 1.05])
+        ax_roc.set_xlabel("False Positive Rate")
+        ax_roc.set_ylabel("True Positive Rate")
+        ax_roc.set_title("ROC Curve — Propensity to Pay")
+        ax_roc.legend(loc="lower right")
+        plt.tight_layout()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            roc_path = os.path.join(tmpdir, "roc_curve.png")
+            fig_roc.savefig(roc_path, dpi=150)
+            mlflow.log_artifact(roc_path, "evaluation_plots")
+        plt.close(fig_roc)
+        print("Logged ROC curve artifact")
+
+    # --- Classification report as text artifact ---
+    with tempfile.TemporaryDirectory() as tmpdir:
+        report_path = os.path.join(tmpdir, "classification_report.txt")
+        with open(report_path, "w") as f:
+            f.write("Classification Report — Propensity to Pay (80/20 Test Split)\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(report)
+        mlflow.log_artifact(report_path, "evaluation_reports")
+    print("Logged classification report artifact")
+
+    # --- 4b.2: Held-Out Evaluation Dataset Scoring ---
+    print("\n=== Held-Out Evaluation Dataset (30 unseen customers) ===")
+    df_eval = spark.table(f"{CATALOG}.{SCHEMA}.evaluation_dataset")
+    pdf_eval = df_eval.toPandas()
+
+    # Build the same target features
+    pdf_eval["target_ptp"] = pdf_eval["label"]
+    for col in feature_cols:
+        pdf_eval[col] = pd.to_numeric(pdf_eval[col], errors="coerce").fillna(0)
+
+    X_eval = pdf_eval[feature_cols].values
+    y_eval = pdf_eval["target_ptp"].values
+
+    # Score using the FULL model (trained on all 100 customers)
+    y_eval_pred = model.predict(X_eval)
+    y_eval_proba = model.predict_proba(X_eval)[:, 1]
+
+    eval_accuracy = accuracy_score(y_eval, y_eval_pred)
+    eval_precision = precision_score(y_eval, y_eval_pred, zero_division=0)
+    eval_recall = recall_score(y_eval, y_eval_pred, zero_division=0)
+    eval_f1 = f1_score(y_eval, y_eval_pred, zero_division=0)
+    eval_roc_auc = roc_auc_score(y_eval, y_eval_proba) if len(set(y_eval)) > 1 else 0.0
+
+    mlflow.log_metrics({
+        "heldout_accuracy": eval_accuracy,
+        "heldout_precision": eval_precision,
+        "heldout_recall": eval_recall,
+        "heldout_f1": eval_f1,
+        "heldout_roc_auc": eval_roc_auc,
+        "heldout_samples": len(y_eval),
+    })
+
+    eval_report = classification_report(y_eval, y_eval_pred, target_names=["Won't Pay", "Will Pay"])
+    print(eval_report)
+    print(f"Held-Out Accuracy:  {eval_accuracy:.3f}")
+    print(f"Held-Out Precision: {eval_precision:.3f}")
+    print(f"Held-Out Recall:    {eval_recall:.3f}")
+    print(f"Held-Out F1:        {eval_f1:.3f}")
+    print(f"Held-Out ROC AUC:   {eval_roc_auc:.3f}")
+
+    # Log held-out report
+    with tempfile.TemporaryDirectory() as tmpdir:
+        heldout_path = os.path.join(tmpdir, "heldout_evaluation_report.txt")
+        with open(heldout_path, "w") as f:
+            f.write("Held-Out Evaluation Report — 30 Unseen Customers\n")
+            f.write("=" * 60 + "\n\n")
+            f.write(eval_report)
+            f.write(f"\nAccuracy:  {eval_accuracy:.3f}\n")
+            f.write(f"Precision: {eval_precision:.3f}\n")
+            f.write(f"Recall:    {eval_recall:.3f}\n")
+            f.write(f"F1:        {eval_f1:.3f}\n")
+            f.write(f"ROC AUC:   {eval_roc_auc:.3f}\n")
+        mlflow.log_artifact(heldout_path, "evaluation_reports")
+    print("Logged held-out evaluation report artifact")
+
+    eval_run_id = eval_run.info.run_id
+    print(f"\n✅ Offline evaluation complete — Run ID: {eval_run_id}")
+
+# COMMAND ----------
+
+# MAGIC %md
 # MAGIC ## Step 5: Register Models in Unity Catalog
 # MAGIC
 # MAGIC This registers the trained models in the UC Model Registry.
