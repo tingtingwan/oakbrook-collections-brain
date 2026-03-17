@@ -956,16 +956,27 @@
                     <img src="/api/architecture" alt="Collections Brain Architecture" onerror="this.parentElement.innerHTML='<p style=\'color:#a0aec0;padding:40px;\'>Architecture diagram loading... Check the Architecture tab after deployment.</p>'">
                 </div>
 
-                <h3>Data Flow</h3>
-                <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-size: 13px; line-height: 2; font-family: monospace;">
-                    <strong>1. Ingest</strong> &rarr; Oracle (Lakeflow Connect CDC) + IceNet (SQL Server) + Zendesk (Streaming) + SFTP<br>
-                    <strong>2. Process</strong> &rarr; Medallion architecture (Bronze &rarr; Silver &rarr; Gold) in Unity Catalog<br>
-                    <strong>3. Feature Store</strong> &rarr; Customer 360 Feature Table with ~1,000 features<br>
-                    <strong>4. Train</strong> &rarr; Propensity-to-Pay + Best-Time-to-Contact models (MLflow experiment tracking)<br>
-                    <strong>5. Deploy</strong> &rarr; Register models in MLflow Registry, deploy to Model Serving endpoints<br>
-                    <strong>6. Serve</strong> &rarr; Real-time scoring via Model Serving with Feature Table auto-lookup<br>
-                    <strong>7. Orchestrate</strong> &rarr; Multi-Agent Supervisor calls models + MCP scorecard + RAG comms<br>
-                    <strong>8. Trace</strong> &rarr; Every agent decision logged in MLflow 3.0 for FCA audit compliance
+                <h3>Data Flow — Current State + Proposed AI Layer</h3>
+                <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-size: 13px; line-height: 2;">
+                    <div style="margin-bottom:12px;padding:8px 12px;background:#edf2f7;border-radius:6px;font-weight:600;color:#4a5568;">EXISTING (Today)</div>
+                    <div style="font-family: monospace;">
+                        <strong>1. Ingest (Batch)</strong> &rarr; IceNet/SQL Server (3x daily) + O6K Events/GCS (hourly 7am-6pm) + Zendesk &amp; Mailchimp (Fivetran, hourly) + Collections FTP (daily)<br>
+                        <strong>2. Process</strong> &rarr; Bronze (raw) &rarr; Silver (cleansed, every 2-4 hrs) &rarr; Gold (curated, up to 3x daily)<br>
+                        <strong>3. Consume</strong> &rarr; Ops Excel (live query) + O6K Decision Engines (daily batch) + Power BI (daily refresh) + Claude/Cursor (MCP, new)
+                    </div>
+                    <div style="margin:12px 0;padding:8px 12px;background:#ebf8ff;border-radius:6px;font-weight:600;color:#1a365d;">NEW: AI Collections Layer (What We're Proposing)</div>
+                    <div style="font-family: monospace;">
+                        <strong>4. Feature Tables</strong> &rarr; Materialise Customer 360 from Gold + ClearScore Open Banking API &rarr; Unity Catalog Feature Tables<br>
+                        <strong>5. Train + Deploy</strong> &rarr; Propensity-to-Pay + Best-Time-to-Contact models &rarr; MLflow experiment tracking &rarr; MLflow Model Registry &rarr; Model Serving endpoints<br>
+                        <strong>6. Score</strong> &rarr; Real-time inference via Model Serving with Feature Table auto-lookup (~1,000 features)<br>
+                        <strong>7. Orchestrate</strong> &rarr; AI Agent (Claude Sonnet via FMAPI) calls: ML models + MCP scorecard + vulnerability engine + RAG comms generator<br>
+                        <strong>8. Approve</strong> &rarr; Generated comms submitted to UC Delta approval queue &rarr; Manager reviews &rarr; Approved comms sent to WhatsApp/SMS/Email<br>
+                        <strong>9. Trace</strong> &rarr; Every agent decision logged in MLflow 3.0 (replaces Langfuse) &rarr; FCA audit trail with model versions
+                    </div>
+                    <div style="margin-top:12px;padding:8px 12px;background:#fff7ed;border-radius:6px;font-weight:600;color:#9c4221;">FUTURE: Lakeflow Connect Migration</div>
+                    <div style="font-family: monospace;">
+                        <strong>10. Replace Fivetran</strong> &rarr; Zendesk + Mailchimp via Lakeflow Connect (native) + Oracle CDC (when loan platform migrates from IceNet, end 2026)
+                    </div>
                 </div>
             </div>
         </div>
