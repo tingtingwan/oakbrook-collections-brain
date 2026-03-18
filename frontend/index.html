@@ -963,34 +963,74 @@
         <!-- TAB 4: Architecture -->
         <div class="tab-panel" id="tab-arch">
             <div class="arch-content">
-                <h2>System Architecture</h2>
-                <p style="color: var(--text-light); margin-bottom: 16px;">How the Collections Brain orchestrates Databricks capabilities to deliver AI-optimised collection strategies.</p>
+                <h2>Data Flow &amp; Architecture</h2>
+                <p style="color: var(--text-light); margin-bottom: 16px;">How data flows from sources through the AI Collections Brain to customer outreach.</p>
 
-                <div class="arch-diagram" id="archDiagram">
-                    <img src="/api/architecture" alt="Collections Brain Architecture" onerror="this.parentElement.innerHTML='<p style=\'color:#a0aec0;padding:40px;\'>Architecture diagram loading... Check the Architecture tab after deployment.</p>'">
+                <!-- Visual Data Flow -->
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;align-items:stretch;">
+
+                    <div style="flex:1;min-width:140px;background:#fff7ed;border:1px solid #f97316;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#9c4221;font-weight:600;margin-bottom:4px;">EXISTING</div>
+                        <div style="font-size:20px;">&#x1F4E5;</div>
+                        <div style="font-weight:600;font-size:12px;color:#431407;">1. Ingest</div>
+                        <div style="font-size:10px;color:#9c4221;margin-top:4px;">IceNet 3x/day<br>O6K hourly<br>Zendesk (Fivetran)<br>FTP daily</div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;color:#94a3b8;font-size:20px;">&#x2192;</div>
+
+                    <div style="flex:1;min-width:140px;background:#edf2f7;border:1px solid #718096;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#4a5568;font-weight:600;margin-bottom:4px;">EXISTING</div>
+                        <div style="font-size:20px;">&#x2699;</div>
+                        <div style="font-weight:600;font-size:12px;color:#2d3748;">2. Process</div>
+                        <div style="font-size:10px;color:#4a5568;margin-top:4px;">Bronze &rarr; Silver &rarr; Gold<br>Medallion architecture<br>Every 2-4 hours</div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;color:#94a3b8;font-size:20px;">&#x2192;</div>
+
+                    <div style="flex:1;min-width:140px;background:#dbeafe;border:1px solid #3b82f6;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#1e3a5f;font-weight:600;margin-bottom:4px;">NEW</div>
+                        <div style="font-size:20px;">&#x1F4CA;</div>
+                        <div style="font-weight:600;font-size:12px;color:#1a365d;">3. Feature Tables</div>
+                        <div style="font-size:10px;color:#2a4365;margin-top:4px;">Customer 360 (UC)<br>+ ClearScore OB<br>Primary keys</div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;color:#94a3b8;font-size:20px;">&#x2192;</div>
+
+                    <div style="flex:1;min-width:140px;background:#dcfce7;border:1px solid #16a34a;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#14532d;font-weight:600;margin-bottom:4px;">NEW</div>
+                        <div style="font-size:20px;">&#x1F916;</div>
+                        <div style="font-weight:600;font-size:12px;color:#14532d;">4. ML + Agent</div>
+                        <div style="font-size:10px;color:#166534;margin-top:4px;">PTP + BTC (Serving)<br>Scorecard (UC SQL)<br>Vulnerability (LLM)<br>Comms (LLM)</div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;color:#94a3b8;font-size:20px;">&#x2192;</div>
+
+                    <div style="flex:1;min-width:140px;background:#f3e8ff;border:1px solid #805ad5;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#3b0764;font-weight:600;margin-bottom:4px;">NEW</div>
+                        <div style="font-size:20px;">&#x2705;</div>
+                        <div style="font-weight:600;font-size:12px;color:#3b0764;">5. Approve</div>
+                        <div style="font-size:10px;color:#553c9a;margin-top:4px;">UC Delta queue<br>Manager review<br>Human-in-the-loop</div>
+                    </div>
+
+                    <div style="display:flex;align-items:center;color:#94a3b8;font-size:20px;">&#x2192;</div>
+
+                    <div style="flex:1;min-width:140px;background:#f0fff4;border:1px solid #25d366;border-radius:8px;padding:12px;text-align:center;">
+                        <div style="font-size:10px;color:#128c7e;font-weight:600;margin-bottom:4px;">OUTPUT</div>
+                        <div style="font-size:20px;">&#x1F4F2;</div>
+                        <div style="font-weight:600;font-size:12px;color:#128c7e;">6. Send</div>
+                        <div style="font-size:10px;color:#128c7e;margin-top:4px;">WhatsApp<br>SMS<br>Email</div>
+                    </div>
+
                 </div>
 
-                <h3>Data Flow — Current State + Proposed AI Layer</h3>
-                <div style="background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; font-size: 13px; line-height: 2;">
-                    <div style="margin-bottom:12px;padding:8px 12px;background:#edf2f7;border-radius:6px;font-weight:600;color:#4a5568;">EXISTING (Today)</div>
-                    <div style="font-family: monospace;">
-                        <strong>1. Ingest (Batch)</strong> &rarr; IceNet/SQL Server (3x daily) + O6K Events/GCS (hourly 7am-6pm) + Zendesk &amp; Mailchimp (Fivetran, hourly) + Collections FTP (daily)<br>
-                        <strong>2. Process</strong> &rarr; Bronze (raw) &rarr; Silver (cleansed, every 2-4 hrs) &rarr; Gold (curated, up to 3x daily)<br>
-                        <strong>3. Consume</strong> &rarr; Ops Excel (live query) + O6K Decision Engines (daily batch) + Power BI (daily refresh) + Claude/Cursor (MCP, new)
-                    </div>
-                    <div style="margin:12px 0;padding:8px 12px;background:#ebf8ff;border-radius:6px;font-weight:600;color:#1a365d;">NEW: AI Collections Layer (What We're Proposing)</div>
-                    <div style="font-family: monospace;">
-                        <strong>4. Feature Tables</strong> &rarr; Materialise Customer 360 from Gold + ClearScore Open Banking API &rarr; Unity Catalog Feature Tables<br>
-                        <strong>5. Train + Deploy</strong> &rarr; Propensity-to-Pay + Best-Time-to-Contact models &rarr; MLflow experiment tracking &rarr; MLflow Model Registry &rarr; Model Serving endpoints<br>
-                        <strong>6. Score</strong> &rarr; Real-time inference via Model Serving endpoints (Feature Table auto-lookup not yet on GCP — use SQL query at request time)<br>
-                        <strong>7. Orchestrate</strong> &rarr; AI Agent (Claude Sonnet via FMAPI) calls: ML models + MCP scorecard + LLM vulnerability + LLM comms<br>
-                        <strong>8. Approve</strong> &rarr; Generated comms submitted to UC Delta approval queue &rarr; Manager reviews &rarr; Approved comms sent to WhatsApp/SMS/Email<br>
-                        <strong>9. Trace</strong> &rarr; Every agent decision logged in MLflow 3.0 (replaces Langfuse) &rarr; FCA audit trail with model versions
-                    </div>
-                    <div style="margin-top:12px;padding:8px 12px;background:#fff7ed;border-radius:6px;font-weight:600;color:#9c4221;">FUTURE: Lakeflow Connect Migration</div>
-                    <div style="font-family: monospace;">
-                        <strong>10. Replace Fivetran</strong> &rarr; Zendesk + Mailchimp via Lakeflow Connect (native) + Oracle CDC (when loan platform migrates from IceNet, end 2026)
-                    </div>
+                <div style="text-align:center;margin-bottom:8px;font-size:11px;color:#718096;">
+                    &#x1F50D; MLflow 3.0 traces every step &bull; &#x1F6E1; Unity Catalog governs all data &amp; models
+                </div>
+
+                <!-- Architecture Diagram -->
+                <h3>Architecture Diagram</h3>
+                <div class="arch-diagram" id="archDiagram">
+                    <img src="/api/architecture" alt="Collections Brain Architecture" onerror="this.parentElement.innerHTML='<p style=\'color:#a0aec0;padding:40px;\'>Architecture diagram loading...</p>'">
                 </div>
             </div>
         </div>
