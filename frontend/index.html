@@ -743,6 +743,7 @@
             <div class="subtitle">AI-Powered Collections Workbench</div>
         </div>
         <span class="badge">DEMO</span>
+        <span onclick="toggleSidebar()" style="cursor:pointer;padding:6px 12px;border:1px solid rgba(255,255,255,0.3);border-radius:6px;font-size:12px;color:rgba(255,255,255,0.8);margin-left:8px;" title="Toggle portfolio sidebar" id="sidebarToggle">&#x2630; Portfolio</span>
         <div class="header-tabs">
             <div class="header-tab active" onclick="switchTab('workbench')">Workbench</div>
             <div class="header-tab" onclick="switchTab('approvals')">Approval Queue</div>
@@ -753,8 +754,11 @@
     </div>
 
     <div class="main">
-        <div class="sidebar">
-            <div class="sidebar-header">Collections Portfolio</div>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header" style="display:flex;justify-content:space-between;align-items:center;">
+                Collections Portfolio
+                <span onclick="toggleSidebar()" style="cursor:pointer;font-size:18px;color:var(--text-light);" title="Hide sidebar">&#x2715;</span>
+            </div>
             <div class="customer-list" id="customerList"></div>
         </div>
 
@@ -1304,6 +1308,15 @@
         // ========================
         // TAB SWITCHING
         // ========================
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            if (sb.style.display === 'none') {
+                sb.style.display = '';
+            } else {
+                sb.style.display = 'none';
+            }
+        }
+
         function switchTab(tab) {
             document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active'));
