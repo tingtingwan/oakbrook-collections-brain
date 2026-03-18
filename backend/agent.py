@@ -551,13 +551,14 @@ async def run_agent(messages: list[dict]) -> dict:
     """
     result = await _run_agent_inner(messages)
 
-    # Log trace to MLflow (non-blocking)
+    # Log trace to MLflow (fire-and-forget in background thread)
+    import threading
     user_query = ""
     for m in reversed(messages):
         if m["role"] == "user":
             user_query = m["content"]
             break
-    _log_agent_trace(user_query, result.get("trace", []), result.get("response", ""))
+    threading.Thread(target=_log_agent_trace, args=(user_query, result.get("trace", []), result.get("response", "")), daemon=True).start()
 
     return result
 
@@ -676,7 +677,8 @@ async def run_agent_stream(messages: list[dict]):
                 if m["role"] == "user":
                     user_query = m["content"]
                     break
-            _log_agent_trace(user_query, trace, final_text)
+            import threading
+            threading.Thread(target=_log_agent_trace, args=(user_query, trace, final_text), daemon=True).start()
 
             yield {"type": "done", "data": final_text}
             return
